@@ -12,10 +12,31 @@ import state
 from achievements import ACHIEVEMENTS
 from client import client
 from config import MATRIX_BG_PATH, USER_COOLDOWN_SECONDS
-from database import get_global_top, get_user_stats, remove_pm_opt_out, save_pm_opt_out
+from database import (
+    get_global_top,
+    get_user_stats,
+    remove_pm_opt_out,
+    save_pm_opt_out,
+)
 from helpers import check_and_update_cooldown, get_time_str
+from identity import build_display_name, sync_target_identity
 from matrix_bg import is_matrix_user
 from rendering import render_telegram_bubble
+
+
+async def resolve_current_names(user_ids):
+    """Свежие сущности пользователей из Telegram: {user_id: entity}.
+
+    Ошибка резолва отдельного ID (нет в кэше сессии, удалённый аккаунт,
+    FloodWait) не роняет команду — для него останется сохранённое имя.
+    """
+    entities = {}
+    for uid in {uid for uid in user_ids if uid}:
+        try:
+            entities[uid] = await client.get_entity(uid)
+        except Exception:
+            continue
+    return entities
 
 
 @client.on(events.NewMessage)
@@ -50,6 +71,16 @@ async def handle_commands(event):
     # --- КОМАНДА /top ---
     if command_text.startswith('/top'):
         top_users, top_reasons = get_global_top()
+
+        # Показываем актуальные имена из Telegram, а не сохранённые при наказании,
+        # и заодно обновляем ими записи в БД
+        fresh = await resolve_current_names([row[0] for row in top_users])
+        for entity in fresh.values():
+            sync_target_identity(entity)
+        top_users = [
+            (build_display_name(fresh[row[0]]) if row[0] in fresh else row[1],) + tuple(row[2:])
+            for row in top_users
+        ]
 
         users_list = ""
         for idx, (name, mutes, bans, total) in enumerate(top_users, 1):
@@ -104,14 +135,9 @@ async def handle_commands(event):
         target_id = target.id
         target_username = getattr(target, 'username', None)
 
-        display_name = getattr(target, 'first_name', '') or ''
-        last_name = getattr(target, 'last_name', '') or ''
-        if last_name:
-            display_name += f" {last_name}"
-        if not display_name.strip() and target_username:
-            display_name = f"@{target_username}"
-        if not display_name.strip():
-            display_name = f"ID {target_id}"
+        # Актуальное имя из Telegram + синхронизация старых записей в БД
+        display_name = build_display_name(target)
+        sync_target_identity(target)
 
         mutes, bans, chats, reasons = get_user_stats(target_id, target_username)
 

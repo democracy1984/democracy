@@ -14,6 +14,7 @@ from client import client
 from config import ALLOWED_MODS, USER_COOLDOWN_SECONDS
 from database import backfill_victim_user_id, get_user_stats, lookup_user_by_victim_name, save_action
 from helpers import check_and_update_cooldown, get_time_str
+from identity import sync_user_by_id
 from notifications import try_send_pm
 from parsing import parse_moderation_message
 
@@ -42,6 +43,10 @@ async def handle_moderation_message(event):
         # Если ID известен — привязываем его к старым безымянным записям
         if parsed.get('user_id') and parsed.get('victim_name'):
             backfill_victim_user_id(parsed['victim_name'], parsed['user_id'])
+
+        # Обновляем имя/username во всех старых записях нарушителя
+        if parsed.get('user_id'):
+            await sync_user_by_id(parsed['user_id'])
 
         # Кулдаун только по стабильному идентификатору: ID, иначе username.
         # Отображаемое имя не используем — однофамильцы/заглушки схлопнулись бы.

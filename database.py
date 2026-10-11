@@ -186,6 +186,55 @@ def backfill_victim_user_id(victim_name, user_id):
     return cursor.rowcount
 
 
+def format_display_name(first_name, last_name=None, username=None, user_id=None):
+    """Единый формат отображаемого имени (как в /stats): имя фамилия → @username → ID."""
+    name = (first_name or '').strip()
+    if last_name:
+        name += f" {last_name}"
+    name = name.strip()
+    if not name and username:
+        name = f"@{username}"
+    if not name and user_id:
+        name = f"ID {user_id}"
+    return name
+
+
+def sync_victim_identity(user_id, victim_name=None, username=None):
+    """Обновляет имя/username во ВСЕХ старых записях пользователя.
+
+    Вызывается, когда видим актуальный профиль из Telegram (новое сообщение,
+    действие бота), чтобы /stats и /top не показывали старое имя.
+    Возвращает True, если что-то обновилось.
+    """
+    if not user_id or (not victim_name and not username):
+        return False
+
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT victim_name, username FROM actions
+        WHERE user_id = ?
+        ORDER BY id DESC LIMIT 1
+    ''', (user_id,))
+    row = cursor.fetchone()
+    if row is None:
+        return False
+
+    sets, params = [], []
+    if victim_name and not _junk_name(victim_name) and row[0] != victim_name:
+        sets.append("victim_name = ?")
+        params.append(victim_name)
+    if username and row[1] != username:
+        sets.append("username = ?")
+        params.append(username)
+    if not sets:
+        return False
+
+    cursor.execute(f"UPDATE actions SET {', '.join(sets)} WHERE user_id = ?", params + [user_id])
+    conn.commit()
+    return cursor.rowcount > 0
+
+
 def get_user_stats(user_id, username):
     """Получение индивидуальной статистики пользователя из БД.
 
@@ -237,11 +286,16 @@ def get_user_stats(user_id, username):
 
 
 def get_global_top():
-    """Получение глобального топа для администратора."""
+    """Получение глобального топа для администратора.
+
+    Каждая строка: (user_id, name, mutes, bans, total). user_id нужен,
+    чтобы показать актуальное имя пользователя из Telegram.
+    """
     cursor = get_conn().cursor()
 
     cursor.execute('''
         SELECT
+            user_id,
             COALESCE(victim_name, '@' || username, 'ID ' || user_id) as name,
             SUM(CASE WHEN action_type = 'mute' THEN 1 ELSE 0 END) as mutes,
             SUM(CASE WHEN action_type = 'ban' THEN 1 ELSE 0 END) as bans,
