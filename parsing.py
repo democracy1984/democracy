@@ -16,7 +16,11 @@ def parse_moderation_message(message):
     duration = "permanent"
     reason = "Не указана"
 
-    if any(w in text_lower for w in ["shhh", "quiet now", "помолчи", "заглушен", "мутирован", "тссс"]):
+    # Негации и служебные ответы ботов («не забанен», «право слова вернули») — не наказания
+    if any(w in text_lower for w in ["не забанен", "не заблокирован", "не заглушен", "вернули право слова", "снят бан"]):
+        return None
+
+    if any(w in text_lower for w in ["shhh", "quiet now", "помолчи", "заглушен", "мутирован", "тссс", "лишается права слова"]):
         action_type = "mute"
     elif any(w in text_lower for w in ["bites the dust", "укусил пыль", "забанен", "banned", "заблокирован"]):
         action_type = "ban"
@@ -67,7 +71,7 @@ def parse_moderation_message(message):
                     victim_name = line.split()[0].strip()
                     break
 
-    if not victim_name or victim_name == "---":
+    if not victim_name or not victim_name.strip('\u200b\u200c\u200d \ufe0f'):
         if victim_id:
             victim_name = f"ID {victim_id}"
         else:

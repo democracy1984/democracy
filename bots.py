@@ -28,6 +28,12 @@ MODERATOR_BOTS = [
         "bot_id": 7945156565,
         "bot_username": None,
     },
+    {
+        "bot_key": "iris",
+        "bot_name": "Iris",
+        "bot_id": 5434504334,
+        "bot_username": "@iris_moon_bot",
+    },
 ]
 
 
@@ -38,9 +44,18 @@ def _bot_label(bot: dict) -> str:
     return bot["bot_name"]
 
 
-# Имя конкретного бота по ключу (удобно для логов и статусных сообщений)
-MISS_ROSE_NAME = _bot_label(MODERATOR_BOTS[0])
-THM_CHATBOT_NAME = _bot_label(MODERATOR_BOTS[1])
+def bot_name_by_key(bot_key: str) -> str:
+    """Имя конкретного бота по ключу (удобно для логов и статусных сообщений)."""
+    for bot in MODERATOR_BOTS:
+        if bot.get("bot_key") == bot_key:
+            return _bot_label(bot)
+    return bot_key
+
+
+# Имена конкретных ботов (ленивый доступ по ключу)
+MISS_ROSE_NAME = bot_name_by_key("miss_rose")
+THM_CHATBOT_NAME = bot_name_by_key("thm_chatbot")
+IRIS_NAME = bot_name_by_key("iris")
 
 
 # ID ботов, известные заранее (без сетевого резолва)
