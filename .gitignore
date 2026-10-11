@@ -1,0 +1,36 @@
+# --- СЕКРЕТЫ И СЕССИИ TELEGRAM ---
+secrets/
+*.session
+*.session-journal
+
+# --- БАЗЫ ДАННЫХ С ЛОГАМИ (содержат данные чатов) ---
+*.db
+*.db.bak
+*.db.old
+*.db-wal
+*.db-shm
+
+# --- СТАРЫЕ КОПИИ / РЕЗЕРВНЫЕ ФАЙЛЫ ---
+old/
+*.bak
+*.py.bak
+
+# --- СКАЧАННЫЕ АССЕТЫ ---
+matrix_bg.gif
+
+# --- ОКРУЖЕНИЕ PYTHON ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eq-*
+.eq-*/
+build/
+dist/
+
+# --- IDE / ОС ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
