@@ -60,6 +60,7 @@ async def handle_moderation_message(event):
             print(f"[*] Пропуск дублирующей реакции для пользователя {user_key} (кулдаун {USER_COOLDOWN_SECONDS} сек)")
             return
 
+        chat_id = event.chat_id
         chat_title = "Неизвестный чат"
         if event.chat and hasattr(event.chat, 'title'):
             chat_title = event.chat.title
