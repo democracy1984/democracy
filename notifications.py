@@ -43,9 +43,7 @@ async def send_no_dialog_fallback(chat_id, reply_to, target_victim):
         return
     mention = f'<a href="tg://user?id={target_victim.id}">{target_victim.first_name or "друг"}</a>'
     text = (
-        f"🕊 {mention}, к сожалению, я не могу написать тебе первым: "
-        f"телеграм сделает мне ай-ай-ай. "
-        f"Напиши мне, пожалуйста, в личку сам — и я всё расскажу про демократию и свободу выбора!"
+        f"🕊 {mention} к сожелению я не могу писать первым ибо телеграм сделает мне айайай, прошу написать мне первым"
     )
     try:
         await asyncio.sleep(random.uniform(1.9, 2.6))
