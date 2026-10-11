@@ -19,8 +19,9 @@ API_ID = int(os.environ.get("TELEGRAM_API_ID", 2040))
 API_HASH = os.environ.get("TELEGRAM_API_HASH", "b18441a1ff607e10a989891a5462e627")
 
 # --- ПАПКА С СЕССИЯМИ TELEGRAM ---
-# Файлы сессий (*.session) лежат здесь и не попадают в git (см. .gitignore)
-SESSION_DIR = "secrets"
+# Файлы сессий (*.session) лежат здесь и не попадают в git (см. .gitignore).
+# Можно переопределить через переменную окружения (например, для тестов на копии).
+SESSION_DIR = os.environ.get("DEMOCRACY_SESSION_DIR", "secrets")
 
 # --- ИМЕНА СЕССИЙ ---
 MAIN_SESSION_NAME = "my_account"          # основная сессия юзербота

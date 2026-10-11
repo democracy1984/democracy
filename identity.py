@@ -35,7 +35,7 @@ def sync_user_identity(entity) -> bool:
     if not entity.username and not entity.first_name:
         return False
     name = format_display_name(entity.first_name, entity.last_name, entity.username, entity.id)
-    return sync_victim_identity(entity.id, name, entity.username)
+    return bool(sync_victim_identity(entity.id, name, entity.username))
 
 
 def sync_target_identity(entity):

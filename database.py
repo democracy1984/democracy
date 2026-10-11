@@ -10,8 +10,9 @@
 
 import sqlite3
 import atexit
+import os
 
-DB_PATH = "bot_stats.db"
+DB_PATH = os.environ.get("DEMOCRACY_DB", "bot_stats.db")
 
 _conn = None
 
@@ -200,39 +201,37 @@ def format_display_name(first_name, last_name=None, username=None, user_id=None)
 
 
 def sync_victim_identity(user_id, victim_name=None, username=None):
-    """Обновляет имя/username во ВСЕХ старых записях пользователя.
+    """Обновляет имя/username во ВСЕХ записях пользователя.
 
     Вызывается, когда видим актуальный профиль из Telegram (новое сообщение,
-    действие бота), чтобы /stats и /top не показывали старое имя.
-    Возвращает True, если что-то обновилось.
+    действие бота), чтобы /stats и /top не показывали старое имя. Обновляются
+    в том числе строки с устаревшими вариантами имени (например, если раньше
+    человек писался иначе). Возвращает число обновлённых строк.
     """
     if not user_id or (not victim_name and not username):
-        return False
+        return 0
 
-    conn = get_conn()
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT victim_name, username FROM actions
-        WHERE user_id = ?
-        ORDER BY id DESC LIMIT 1
-    ''', (user_id,))
-    row = cursor.fetchone()
-    if row is None:
-        return False
-
-    sets, params = [], []
-    if victim_name and not _junk_name(victim_name) and row[0] != victim_name:
+    sets, params, changed_conditions, check_params = [], [], [], []
+    if victim_name and not _junk_name(victim_name):
         sets.append("victim_name = ?")
         params.append(victim_name)
-    if username and row[1] != username:
+        changed_conditions.append("(victim_name IS NULL OR victim_name != ?)")
+        check_params.append(victim_name)
+    if username:
         sets.append("username = ?")
         params.append(username)
+        changed_conditions.append("(username IS NULL OR username != ?)")
+        check_params.append(username)
     if not sets:
-        return False
+        return 0
 
-    cursor.execute(f"UPDATE actions SET {', '.join(sets)} WHERE user_id = ?", params + [user_id])
+    conn = get_conn()
+    cursor = conn.execute(
+        f"UPDATE actions SET {', '.join(sets)} WHERE user_id = ? AND ({' OR '.join(changed_conditions)})",
+        params + [user_id] + check_params,
+    )
     conn.commit()
-    return cursor.rowcount > 0
+    return cursor.rowcount
 
 
 def get_user_stats(user_id, username):
