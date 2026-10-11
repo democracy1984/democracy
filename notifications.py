@@ -37,8 +37,32 @@ async def load_pm_dialogs():
     print(f"[*] {get_time_str()} Загружено личных диалогов: {len(state.PM_DIALOG_USER_IDS)}")
 
 
-async def try_send_pm(user_id, username, text, sticker):
-    """Попытка отправить личное сообщение и стикер жертве блокировки с поддержкой username и повтором при FloodWait."""
+async def send_no_dialog_fallback(chat_id, reply_to, target_victim):
+    """Не можем писать первыми — просим написать боту в чате, где случилось наказание."""
+    if not chat_id:
+        return
+    mention = f'<a href="tg://user?id={target_victim.id}">{target_victim.first_name or "друг"}</a>'
+    text = (
+        f"🕊 {mention}, к сожалению, я не могу написать тебе первым: "
+        f"телеграм сделает мне ай-ай-ай. "
+        f"Напиши мне, пожалуйста, в личку сам — и я всё расскажу про демократию и свободу выбора!"
+    )
+    try:
+        await asyncio.sleep(random.uniform(1.9, 2.6))
+        await client.send_message(chat_id, text, reply_to=reply_to, parse_mode='html')
+        print(f"[+] {get_time_str()} ЛС недоступны — отправлена просьба написать первой в чат {chat_id} (жертва: {target_victim.id})")
+    except errors.FloodWaitError as e:
+        print(f"[-] FloodWait при отправке просьбы в чат: {e.seconds} сек.")
+    except Exception as e:
+        print(f"[-] Не удалось отправить просьбу написать в ЛС в чат {chat_id}: {e}")
+
+
+async def try_send_pm(user_id, username, text, sticker, chat_id=None, reply_to=None):
+    """Попытка отправить личное сообщение и стикер жертве блокировки с поддержкой username и повтором при FloodWait.
+
+    Если личного диалога нет и писать первыми нельзя — в исходном чате отправляется
+    просьба написать боту в ЛС (chat_id и reply_to для этого передаёт вызывающий код).
+    """
     target_victim = None
 
     # Сначала пытаемся разрешить по username (работает глобально)
@@ -69,7 +93,8 @@ async def try_send_pm(user_id, username, text, sticker):
     if resolved_id not in state.PM_DIALOG_USER_IDS:
         await load_pm_dialogs()
     if resolved_id not in state.PM_DIALOG_USER_IDS:
-        print(f"[*] Пропуск ЛС для {resolved_id} ({username or user_id}): личного диалога нет, первыми не пишем.")
+        print(f"[*] Диалога с {resolved_id} ({username or user_id}) нет — просим написать первыми в чат.")
+        await send_no_dialog_fallback(chat_id, reply_to, target_victim)
         return
 
     try:

@@ -106,7 +106,10 @@ async def handle_moderation_message(event):
                     promo_text += f"\n🎉 {ach['title']} — {ach['desc']}"
 
             pm_sticker = state.PIGEON_STICKER if state.PIGEON_STICKER else state.EAGLE_STICKER
-            await try_send_pm(parsed['user_id'], parsed['username'], promo_text, pm_sticker)
+            await try_send_pm(
+                parsed['user_id'], parsed['username'], promo_text, pm_sticker,
+                chat_id=chat_id, reply_to=event.id,
+            )
 
     except Exception as log_err:
         print(f"[-] Критическая ошибка в обработчике модерации: {log_err}")
