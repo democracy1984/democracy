@@ -382,3 +382,57 @@ def get_chats_summary():
         ORDER BY total DESC
     ''')
     return cursor.fetchall()
+
+
+def get_user_chat_ids(user_id, username=None):
+    """ID групп, где пользователь получал муты или баны."""
+    cursor = get_conn().cursor()
+    where = "user_id = ?"
+    params = [user_id]
+    if username and username not in ('.', ' '):
+        where += " OR (username = ? AND username IS NOT NULL)"
+        params.append(username)
+    cursor.execute(f'''
+        SELECT DISTINCT chat_id FROM actions
+        WHERE action_type IN ('mute', 'ban') AND ({where})
+    ''', params)
+    return [row[0] for row in cursor.fetchall()]
+
+
+def get_chats_top(chat_ids, limit=15):
+    """Топ нарушителей и причин по заданному списку чатов.
+
+    Возвращает (top_users, top_reasons) в формате get_global_top().
+    """
+    if not chat_ids:
+        return [], []
+
+    placeholders = ','.join('?' * len(chat_ids))
+    cursor = get_conn().cursor()
+
+    cursor.execute(f'''
+        SELECT
+            user_id,
+            COALESCE(victim_name, '@' || username, 'ID ' || user_id) as name,
+            SUM(CASE WHEN action_type = 'mute' THEN 1 ELSE 0 END) as mutes,
+            SUM(CASE WHEN action_type = 'ban' THEN 1 ELSE 0 END) as bans,
+            COUNT(*) as total
+        FROM actions
+        WHERE chat_id IN ({placeholders})
+        GROUP BY COALESCE(user_id, username, victim_name)
+        ORDER BY total DESC
+        LIMIT ?
+    ''', chat_ids + [limit])
+    top_users = cursor.fetchall()
+
+    cursor.execute(f'''
+        SELECT reason, COUNT(*) as cnt
+        FROM actions
+        WHERE chat_id IN ({placeholders})
+        GROUP BY reason
+        ORDER BY cnt DESC
+        LIMIT 5
+    ''', chat_ids)
+    top_reasons = cursor.fetchall()
+
+    return top_users, top_reasons

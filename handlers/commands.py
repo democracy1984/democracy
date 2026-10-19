@@ -1,7 +1,8 @@
 """Хендлер команд: /stats, /top, /globaltop, /progress, /help, /chats, /stopspamming.
 
-/top в чате показывает топ этого чата, в ЛС — список чатов аккаунта,
-/top <название|ID> — статистика конкретного чата, /globaltop — общий топ.
+/top в чате показывает топ этого чата, в ЛС — сводный топ по группам,
+где сам пользователь получал муты/баны; /top <название|ID> — статистика
+конкретного чата, /globaltop — общий топ.
 """
 
 import html
@@ -16,7 +17,9 @@ from config import MATRIX_BG_PATH, USER_COOLDOWN_SECONDS
 from database import (
     get_chat_stats,
     get_chats_summary,
+    get_chats_top,
     get_global_top,
+    get_user_chat_ids,
     get_user_stats,
     remove_pm_opt_out,
     save_pm_opt_out,
@@ -139,9 +142,8 @@ def format_reason_lines(top_reasons):
     ] or ["Нет данных о причинах"]
 
 
-async def send_global_top(event):
-    """Глобальный топ по всем чатам (бывшее поведение /top)."""
-    top_users, top_reasons = get_global_top()
+async def send_rank(event, top_users, top_reasons, header, image_title):
+    """Отправляет топ нарушителей: текстом в ЛС, картинкой в чате."""
     top_users = await refresh_top_names(top_users)
 
     if event.is_private:
@@ -154,19 +156,50 @@ async def send_global_top(event):
             for idx, (reason, cnt) in enumerate(top_reasons, 1)
         ] or ["• Нет данных о причинах"]
         response = (
-            f"<b>🌍 ГЛОБАЛЬНЫЙ ТОП-15 нарушителей:</b>\n"
+            f"<b>{header}</b>\n"
             f"<blockquote expandable>{chr(10).join(users_lines)}</blockquote>\n\n"
             f"<b>📋 ТОП-5 причин наказаний:</b>\n"
             f"<blockquote>{chr(10).join(reasons_lines)}</blockquote>"
         )
         await event.reply(response, parse_mode='html')
     else:
-        img_bio = render_telegram_bubble('Глобальный ТОП', [
-            ('ТОП-15 нарушителей за всё время', format_top_user_lines(top_users)),
+        img_bio = render_telegram_bubble(image_title, [
+            ('ТОП-15 нарушителей', format_top_user_lines(top_users)),
             ('ТОП-5 причин наказаний', format_reason_lines(top_reasons)),
         ])
         await client.send_file(event.chat_id, img_bio, reply_to=event.id)
-        print(f"[+] {get_time_str()} Отправлена картинка /globaltop в чат {event.chat_id}")
+        print(f"[+] {get_time_str()} Отправлена картинка «{image_title}» в чат {event.chat_id}")
+
+
+async def send_global_top(event):
+    """Глобальный топ по всем чатам."""
+    top_users, top_reasons = get_global_top()
+    await send_rank(
+        event, top_users, top_reasons,
+        header="🌍 ГЛОБАЛЬНЫЙ ТОП-15 нарушителей:",
+        image_title="Глобальный ТОП",
+    )
+
+
+async def send_personal_top(event, user_id, username=None):
+    """Сводный топ по группам, где этот пользователь получал муты/баны."""
+    chat_ids = get_user_chat_ids(user_id, username)
+    if not chat_ids:
+        await event.reply(
+            "<b>📊 Наказаний не найдено.</b>\n\n"
+            "Вы ещё не получали муты или баны ни в одном чате — "
+            "значит, и топа по вашим группам пока нет.",
+            parse_mode='html',
+        )
+        return
+
+    top_users, top_reasons = get_chats_top(chat_ids)
+    groups_word = "группе" if len(chat_ids) % 10 == 1 and len(chat_ids) % 100 != 11 else "группам"
+    await send_rank(
+        event, top_users, top_reasons,
+        header=f"🏆 ТОП-15 нарушителей по {len(chat_ids)} {groups_word}, где вас наказывали:",
+        image_title="ТОП по вашим группам",
+    )
 
 
 async def send_chat_top(event, chat_id, fallback_title=None):
@@ -204,26 +237,6 @@ async def send_chat_top(event, chat_id, fallback_title=None):
         ])
         await client.send_file(event.chat_id, img_bio, reply_to=event.id)
         print(f"[+] {get_time_str()} Отправлена картинка /top по чату {chat_id} в чат {event.chat_id}")
-
-
-async def send_chat_list(event):
-    """Список всех чатов аккаунта с накопленной статистикой (для ЛС)."""
-    chats = merge_chat_stats(await get_account_chats(), get_chats_summary())
-    if not chats:
-        await event.reply("<i>Аккаунт не состоит ни в одном чате.</i>", parse_mode='html')
-        return
-
-    lines = [
-        f"{idx}. <b>{html.escape(chat['title'])}</b> — Всего: <code>{chat['total']}</code> "
-        f"(🔇 {chat['mutes']} | 🚫 {chat['bans']})"
-        for idx, chat in enumerate(chats[:50], 1)
-    ]
-    await event.reply(
-        f"<b>🗂 Чаты аккаунта — топ по наказаниям:</b>\n\n"
-        f"<blockquote expandable>{chr(10).join(lines)}</blockquote>\n\n"
-        f"💡 Детали: <code>/top название</code> или <code>/top ID</code>",
-        parse_mode='html',
-    )
 
 
 async def send_chat_by_query(event, query):
@@ -284,7 +297,7 @@ async def handle_commands(event):
         if arg:
             await send_chat_by_query(event, arg)
         elif event.is_private:
-            await send_chat_list(event)
+            await send_personal_top(event, sender.id, getattr(sender, 'username', None))
         else:
             await send_chat_top(
                 event, event.chat_id,
@@ -396,7 +409,7 @@ async def handle_commands(event):
         response = (
             f"<b>ℹ️ Доступные команды:</b>\n\n"
             f"📊 /stats — Посмотреть свою статистику нарушений\n"
-            f"🏆 /top — В чате: топ этого чата. В ЛС: список чатов аккаунта\n"
+            f"🏆 /top — В чате: топ этого чата. В ЛС: топ по группам, где вас наказывали\n"
             f"🔎 /top &lt;название|ID&gt; — Статистика конкретного чата\n"
             f"🌍 /globaltop — Общий топ-15 нарушителей по всем чатам\n"
             f"⭐ /progress — Ваши достижения\n"
