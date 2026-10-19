@@ -316,3 +316,69 @@ def get_global_top():
     top_reasons = cursor.fetchall()
 
     return top_users, top_reasons
+
+
+def get_chat_stats(chat_id, limit=15):
+    """Статистика одного чата.
+
+    Возвращает (title, total, mutes, bans, top_users, top_reasons).
+    top_users — строки (user_id, name, mutes, bans, total).
+    """
+    cursor = get_conn().cursor()
+
+    cursor.execute('''
+        SELECT
+            (SELECT chat_title FROM actions a2 WHERE a2.chat_id = a.chat_id ORDER BY a2.id DESC LIMIT 1) as title,
+            COUNT(*) as total,
+            SUM(CASE WHEN action_type = 'mute' THEN 1 ELSE 0 END) as mutes,
+            SUM(CASE WHEN action_type = 'ban' THEN 1 ELSE 0 END) as bans
+        FROM actions a
+        WHERE a.chat_id = ?
+    ''', (chat_id,))
+    title, total, mutes, bans = cursor.fetchone()
+    mutes = mutes or 0
+    bans = bans or 0
+
+    cursor.execute('''
+        SELECT
+            user_id,
+            COALESCE(victim_name, '@' || username, 'ID ' || user_id) as name,
+            SUM(CASE WHEN action_type = 'mute' THEN 1 ELSE 0 END) as mutes,
+            SUM(CASE WHEN action_type = 'ban' THEN 1 ELSE 0 END) as bans,
+            COUNT(*) as total
+        FROM actions
+        WHERE chat_id = ?
+        GROUP BY COALESCE(user_id, username, victim_name)
+        ORDER BY total DESC
+        LIMIT ?
+    ''', (chat_id, limit))
+    top_users = cursor.fetchall()
+
+    cursor.execute('''
+        SELECT reason, COUNT(*) as cnt
+        FROM actions
+        WHERE chat_id = ?
+        GROUP BY reason
+        ORDER BY cnt DESC
+        LIMIT 5
+    ''', (chat_id,))
+    top_reasons = cursor.fetchall()
+
+    return title, total, mutes, bans, top_users, top_reasons
+
+
+def get_chats_summary():
+    """Сводка по чатам: [(chat_id, title, total, mutes, bans), ...]."""
+    cursor = get_conn().cursor()
+    cursor.execute('''
+        SELECT
+            a.chat_id,
+            (SELECT chat_title FROM actions a2 WHERE a2.chat_id = a.chat_id ORDER BY a2.id DESC LIMIT 1) as title,
+            COUNT(*) as total,
+            SUM(CASE WHEN action_type = 'mute' THEN 1 ELSE 0 END) as mutes,
+            SUM(CASE WHEN action_type = 'ban' THEN 1 ELSE 0 END) as bans
+        FROM actions a
+        GROUP BY a.chat_id
+        ORDER BY total DESC
+    ''')
+    return cursor.fetchall()

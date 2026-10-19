@@ -39,10 +39,10 @@ def sync_user_identity(entity) -> bool:
 
 
 def sync_target_identity(entity):
-    """Синхронизация из команды /stats: ошибки не должны ломать команду."""
+    """Синхронизация из команд /stats и /top: ошибки не должны ломать команду."""
     try:
         if sync_user_identity(entity):
-            print(f"[*] {get_time_str()} Обновлён профиль {entity.id} по /stats")
+            print(f"[*] {get_time_str()} Обновлён профиль {entity.id}")
     except Exception as e:
         print(f"[-] Не удалось синхронизировать имя пользователя {getattr(entity, 'id', '?')}: {e}")
 
