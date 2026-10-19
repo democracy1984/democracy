@@ -20,6 +20,14 @@ def parse_moderation_message(message):
     if any(w in text_lower for w in ["не забанен", "не заблокирован", "не заглушен", "вернули право слова", "снят бан"]):
         return None
 
+    # Информационные сообщения ботов (описания, инструкции) — не наказания
+    if any(w in text_lower for w in [
+        "how it works?", "privacy policy", "you add this bot", "this bot stops",
+        "bot permissions:", "i help to moderate", "you can control bot",
+        "you can not control bot", "you cannot control bot", "documentation:",
+    ]):
+        return None
+
     if any(w in text_lower for w in ["shhh", "quiet now", "помолчи", "заглушен", "мутирован", "тссс", "лишается права слова"]):
         action_type = "mute"
     elif any(w in text_lower for w in ["bites the dust", "укусил пыль", "забанен", "banned", "заблокирован"]):

@@ -34,6 +34,18 @@ MODERATOR_BOTS = [
         "bot_id": 5434504334,
         "bot_username": "@iris_moon_bot",
     },
+    {
+        "bot_key": "sentinel_prime",
+        "bot_name": "Sentinel Prime",
+        "bot_id": 7847367200,
+        "bot_username": "@SentinelPrime_bot",
+    },
+    {
+        "bot_key": "orgrobot",
+        "bot_name": "OrgRobot",
+        "bot_id": 787057350,
+        "bot_username": "@orgrobot",
+    },
 ]
 
 
