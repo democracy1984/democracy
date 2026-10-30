@@ -46,6 +46,12 @@ MODERATOR_BOTS = [
         "bot_id": 787057350,
         "bot_username": "@orgrobot",
     },
+    {
+        "bot_key": "grouphelp",
+        "bot_name": "GroupHelp",
+        "bot_id": 162726413,
+        "bot_username": "@GroupHelpBot",
+    },
 ]
 
 
