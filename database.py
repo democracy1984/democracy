@@ -65,6 +65,11 @@ def init_db():
             user_id INTEGER PRIMARY KEY
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS pm_intro_sent (
+            user_id INTEGER PRIMARY KEY
+        )
+    ''')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_user_id ON actions (user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_chat_id ON actions (chat_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_action_type ON actions (action_type)')
@@ -91,6 +96,20 @@ def remove_pm_opt_out(user_id: int):
     """Удаляет user_id из таблицы pm_opt_out."""
     conn = get_conn()
     conn.execute("DELETE FROM pm_opt_out WHERE user_id = ?", (user_id,))
+    conn.commit()
+
+
+def load_pm_intro_sent() -> set:
+    """Загружает user_id, которым уже отправляли первое ЛС с припиской."""
+    cursor = get_conn().cursor()
+    cursor.execute("SELECT user_id FROM pm_intro_sent")
+    return {row[0] for row in cursor.fetchall()}
+
+
+def save_pm_intro_sent(user_id: int):
+    """Запоминает, что первое ЛС с припиской про /stopspamming уже отправлено."""
+    conn = get_conn()
+    conn.execute("INSERT OR IGNORE INTO pm_intro_sent (user_id) VALUES (?)", (user_id,))
     conn.commit()
 
 

@@ -15,7 +15,7 @@ import state
 from bots import MODS_TO_RESOLVE, bots_label
 from client import client
 from config import ALLOWED_MODS, STICKER_PACK_NAME
-from database import check_db_empty, init_db, load_pm_opt_out
+from database import check_db_empty, init_db, load_pm_intro_sent, load_pm_opt_out
 from helpers import get_time_str
 from matrix_bg import ensure_matrix_bg
 from scraping import auto_scrape_history
@@ -39,6 +39,10 @@ async def main():
     # Загружаем opt-out список из БД
     state.PM_OPT_OUT.update(load_pm_opt_out())
     print(f"[*] Загружено {len(state.PM_OPT_OUT)} opt-out записей из БД")
+
+    # Загружаем тех, кому уже отправляли первое ЛС (приписка не повторяется)
+    state.PM_INTRO_SENT.update(load_pm_intro_sent())
+    print(f"[*] Загружено {len(state.PM_INTRO_SENT)} записей о первом ЛС")
 
     # Фоновая гифка для Matrix (скачивается один раз)
     await asyncio.to_thread(ensure_matrix_bg)

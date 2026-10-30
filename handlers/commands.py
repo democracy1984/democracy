@@ -272,6 +272,9 @@ async def handle_commands(event):
     raw_text = event.text.strip()
     parts = raw_text.split(maxsplit=1)
     command = parts[0].split('@', 1)[0].lower()
+    # Частый вариант написания с одной «m» — принимаем как /stopspamming
+    if command == '/stopspaming':
+        command = '/stopspamming'
     arg = parts[1].strip() if len(parts) > 1 else ''
 
     if event.is_private:

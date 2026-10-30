@@ -11,5 +11,9 @@ PM_OPT_OUT: set = set()
 # id пользователей, с которыми у аккаунта уже есть личный диалог (неважно, кто его начал)
 PM_DIALOG_USER_IDS: set = set()
 
+# id пользователей, которым уже отправляли первое сообщение в ЛС
+# (используется, чтобы приписка про /stopspamming не повторялась)
+PM_INTRO_SENT: set = set()
+
 EAGLE_STICKER = None
 PIGEON_STICKER = None
