@@ -8,6 +8,7 @@ import math
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 
 from PIL import Image
@@ -38,6 +39,9 @@ from rendering import CARD_STRIP_SIZE, clear_gif_cache, crop_cover
 
 class BackgroundError(ValueError):
     """Ошибка, которую можно показать пользователю."""
+
+
+_ffmpeg_last_error = None
 
 
 def get_actions_count(user_id):
@@ -161,9 +165,14 @@ def _normalize_to_strip(source_path, dest_path):
 
 def ffmpeg_path():
     """Ищет ffmpeg: env → PATH → типовые пути → бинарник из imageio-ffmpeg."""
+    global _ffmpeg_last_error
+    _ffmpeg_last_error = None
+
     explicit = os.environ.get('FFMPEG_BINARY')
-    if explicit and os.path.isfile(explicit) and os.access(explicit, os.X_OK):
-        return explicit
+    if explicit:
+        if os.path.isfile(explicit) and os.access(explicit, os.X_OK):
+            return explicit
+        _ffmpeg_last_error = f"FFMPEG_BINARY указывает на несуществующий файл: {explicit}"
 
     found = shutil.which('ffmpeg')
     if found:
@@ -181,20 +190,32 @@ def ffmpeg_path():
 
     if imageio_ffmpeg is not None:
         try:
-            return imageio_ffmpeg.get_ffmpeg_exe()
+            exe = imageio_ffmpeg.get_ffmpeg_exe()
+            if exe and os.path.isfile(exe) and os.access(exe, os.X_OK):
+                return exe
+            _ffmpeg_last_error = f"imageio-ffmpeg вернул несуществующий путь: {exe!r}"
         except Exception as e:
-            print(f"[-] imageio-ffmpeg не смог отдать бинарник: {e}")
+            _ffmpeg_last_error = f"imageio-ffmpeg: {e}"
+    else:
+        _ffmpeg_last_error = (
+            "imageio-ffmpeg не установлен в этом venv "
+            "(выполни .venv/bin/pip install -r requirements.txt)"
+        )
     return None
 
 
 def ffmpeg_status():
-    """Строка для лога при старте."""
+    """Строка для лога при старте: найден ли ffmpeg и почему нет."""
     if not STATS_BG_ALLOW_VIDEO:
         return "MP4-фоны отключены (STATS_BG_ALLOW_VIDEO=False)"
     path = ffmpeg_path()
     if path:
         return f"ffmpeg найден: {path}"
-    return "ffmpeg не найден — MP4-фоны недоступны (GIF/WEBP работают)"
+    reason = f" ({_ffmpeg_last_error})" if _ffmpeg_last_error else ""
+    return (
+        f"ffmpeg не найден — MP4-фоны недоступны (GIF/WEBP работают){reason}; "
+        f"python: {sys.executable}"
+    )
 
 
 def _convert_video_to_gif(source_path, dest_path):
@@ -203,7 +224,8 @@ def _convert_video_to_gif(source_path, dest_path):
         raise BackgroundError("MP4-анимации отключены — пришли GIF файлом.")
     ffmpeg = ffmpeg_path()
     if not ffmpeg:
-        print("[-] ffmpeg не найден: проверь PATH, FFMPEG_BINARY или установи imageio-ffmpeg")
+        print(f"[-] ffmpeg не найден: {_ffmpeg_last_error or 'причина неизвестна'}; "
+              f"python: {sys.executable}")
         raise BackgroundError(
             "На сервере не найден ffmpeg. Установи ffmpeg или imageio-ffmpeg "
             "(pip install imageio-ffmpeg), либо пришли GIF файлом."
