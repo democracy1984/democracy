@@ -11,7 +11,11 @@ from telethon import TelegramClient
 
 from config import API_ID, API_HASH, MAIN_SESSION_NAME, SESSION_DIR
 
-os.makedirs(SESSION_DIR, exist_ok=True)
+os.makedirs(SESSION_DIR, mode=0o700, exist_ok=True)
+try:
+    os.chmod(SESSION_DIR, 0o700)
+except OSError:
+    pass
 
 client = TelegramClient(
     os.path.join(SESSION_DIR, MAIN_SESSION_NAME),

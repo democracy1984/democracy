@@ -11,6 +11,8 @@ import asyncio
 from telethon.tl.functions.messages import GetStickerSetRequest
 from telethon.tl.types import InputStickerSetShortName
 
+import os
+
 import state
 from bots import MODS_TO_RESOLVE, bots_label
 from client import client
@@ -33,6 +35,12 @@ from handlers import reactions  # noqa: F401
 async def main():
     print("[*] Запуск клиента Telegram...")
     await client.start()
+
+    # Файл сессии содержит полный доступ к аккаунту — закрываем его от других
+    try:
+        os.chmod(client.session.filename, 0o600)
+    except OSError:
+        pass
 
     # Инициализируем БД структуру
     init_db()

@@ -30,6 +30,9 @@ SCRAPER_SESSION_NAME = "scraper_session"  # сессия старого отде
 # --- ФОНОВАЯ ГИФКА ДЛЯ ПОЛЬЗОВАТЕЛЯ MATRIX ---
 MATRIX_BG_URL = "https://upload-assets.vice.com/files/2016/01/22/145348420030000fps.gif"
 MATRIX_BG_PATH = "matrix_bg.gif"
+# Стабильный ID Matrix (проверка по имени подделывается)
+MATRIX_USER_ID = 5963786103
+MATRIX_USERNAME = "matrixivo"
 
 # Каждый N-й кадр фоновой гифки используется в карточке (ускорение без потери плавности)
 GIF_FRAME_STEP = 2
@@ -50,7 +53,10 @@ STATS_BG_MIN_ACTIONS = 100
 STATS_BG_DIR = "media/user_bg"
 # Ограничения загружаемого файла
 STATS_BG_MAX_FILE_MB = 8
-STATS_BG_MAX_FRAMES = 150
+STATS_BG_MAX_FRAMES = 60
+STATS_BG_MAX_SOURCE_FRAMES = 2000
 STATS_BG_MAX_DIMENSION = 2048
+# MP4-анимации обрабатываются через ffmpeg; можно выключить для строгой безопасности
+STATS_BG_ALLOW_VIDEO = True
 # Не чаще одного обновления фона раз в N секунд
 STATS_BG_UPLOAD_COOLDOWN_SECONDS = 30

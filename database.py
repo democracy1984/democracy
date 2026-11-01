@@ -17,6 +17,19 @@ DB_PATH = os.environ.get("DEMOCRACY_DB", "bot_stats.db")
 _conn = None
 
 
+def _secure_db_files():
+    """База содержит логи чатов — закрываем файлы БД и WAL/SHM от других."""
+    if DB_PATH == ':memory:':
+        return
+    for suffix in ('', '-wal', '-shm'):
+        path = DB_PATH + suffix
+        if os.path.exists(path):
+            try:
+                os.chmod(path, 0o600)
+            except OSError:
+                pass
+
+
 def get_conn() -> sqlite3.Connection:
     """Возвращает общее соединение с БД, создавая его при первом обращении."""
     global _conn
@@ -24,6 +37,7 @@ def get_conn() -> sqlite3.Connection:
         _conn = sqlite3.connect(DB_PATH, check_same_thread=False)
         _conn.execute("PRAGMA journal_mode=WAL")   # устойчивее к параллельным чтениям
         _conn.execute("PRAGMA synchronous=NORMAL")
+        _secure_db_files()
     return _conn
 
 
@@ -82,6 +96,7 @@ def init_db():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_action_type ON actions (action_type)')
     conn.commit()
     migrate_legacy_chat_ids()
+    _secure_db_files()
 
 
 def load_pm_opt_out() -> set:
@@ -291,6 +306,17 @@ def sync_victim_identity(user_id, victim_name=None, username=None):
     )
     conn.commit()
     return cursor.rowcount
+
+
+def get_user_actions_total(user_id):
+    """Количество наказаний пользователя строго по user_id.
+
+    Используется для проверки права на свой фон (/setbg): username может
+    сменить владелец, поэтому для доступа считаем только стабильный ID.
+    """
+    cursor = get_conn().cursor()
+    cursor.execute("SELECT COUNT(*) FROM actions WHERE user_id = ?", (user_id,))
+    return cursor.fetchone()[0]
 
 
 def get_user_stats(user_id, username):

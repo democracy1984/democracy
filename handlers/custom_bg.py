@@ -28,6 +28,9 @@ from config import (
 from helpers import check_and_update_cooldown, get_time_str
 from matrix_bg import is_matrix_user
 
+# Не больше двух одновременных обработок GIF (Pillow/ffmpeg)
+_PROCESS_SEMAPHORE = asyncio.Semaphore(2)
+
 
 def _parse_command(event):
     text = (event.text or '').strip()
@@ -71,7 +74,7 @@ async def handle_setbg(event):
     if not sender:
         return
 
-    total = get_actions_count(sender.id, getattr(sender, 'username', None))
+    total = get_actions_count(sender.id)
     if total < STATS_BG_MIN_ACTIONS and not is_matrix_user(sender):
         left = STATS_BG_MIN_ACTIONS - total
         await event.reply(
@@ -116,7 +119,11 @@ async def handle_setbg(event):
         await event.reply("⏳ Подожди немного перед следующей загрузкой фона.")
         return
 
-    os.makedirs(STATS_BG_DIR, exist_ok=True)
+    os.makedirs(STATS_BG_DIR, mode=0o700, exist_ok=True)
+    try:
+        os.chmod(STATS_BG_DIR, 0o700)
+    except OSError:
+        pass
     fd, tmp_path = tempfile.mkstemp(prefix=f"setbg_{sender.id}_", suffix='.bin', dir=STATS_BG_DIR)
     os.close(fd)
     downloaded_path = None
@@ -128,9 +135,10 @@ async def handle_setbg(event):
             return
 
         try:
-            dest_path, frames = await asyncio.to_thread(
-                prepare_user_bg, sender.id, downloaded_path, kind == 'video'
-            )
+            async with _PROCESS_SEMAPHORE:
+                dest_path, frames = await asyncio.to_thread(
+                    prepare_user_bg, sender.id, downloaded_path, kind == 'video'
+                )
             commit_user_bg(sender.id, dest_path)
         except BackgroundError as e:
             await event.reply(f"❌ {e}")

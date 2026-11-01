@@ -65,6 +65,10 @@ async def main():
           f"{' (предпросмотр, ничего не меняем)' if dry_run else ''}")
 
     await client.start()
+    try:
+        os.chmod(client.session.filename, 0o600)
+    except OSError:
+        pass
     me = await client.get_me()
     print(f"[*] Аккаунт: {me.first_name} (@{me.username})")
 

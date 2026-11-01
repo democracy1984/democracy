@@ -6,6 +6,7 @@
 import io
 import os
 import re
+from collections import OrderedDict
 from datetime import datetime
 
 from PIL import Image, ImageDraw, ImageFont
@@ -23,8 +24,10 @@ CARD_LINE_HEIGHT = 27
 CARD_STRIP_HEIGHT = CARD_LINE_HEIGHT + 18
 CARD_STRIP_SIZE = (CARD_WIDTH - CARD_PADDING * 2, CARD_STRIP_HEIGHT)
 
-# Кэш уже нарезанных кадров фона: ключ (путь, mtime, размер, шаг)
-_GIF_STRIP_CACHE = {}
+# Кэш уже нарезанных кадров фона: ключ (путь, mtime, размер, шаг).
+# Ограничен, чтобы пользовательские гифки не съели память.
+GIF_STRIP_CACHE_MAX = 8
+_GIF_STRIP_CACHE = OrderedDict()
 
 
 def find_font(name):
@@ -113,6 +116,7 @@ def gif_strip_frames(path, strip_size, step=GIF_FRAME_STEP):
     key = (os.path.realpath(path), os.path.getmtime(path), strip_size, step)
     cached = _GIF_STRIP_CACHE.get(key)
     if cached is not None:
+        _GIF_STRIP_CACHE.move_to_end(key)
         return cached
     bg = Image.open(path)
     frame_count = getattr(bg, 'n_frames', 1)
@@ -122,6 +126,9 @@ def gif_strip_frames(path, strip_size, step=GIF_FRAME_STEP):
         frames.append(crop_cover(bg.convert('RGB'), strip_size))
         durations.append((bg.info.get('duration', 50) or 50) * step)
     _GIF_STRIP_CACHE[key] = (frames, durations)
+    _GIF_STRIP_CACHE.move_to_end(key)
+    while len(_GIF_STRIP_CACHE) > GIF_STRIP_CACHE_MAX:
+        _GIF_STRIP_CACHE.popitem(last=False)
     return frames, durations
 
 

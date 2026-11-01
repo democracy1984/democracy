@@ -3,14 +3,19 @@
 import os
 import urllib.request
 
-from config import MATRIX_BG_PATH, MATRIX_BG_URL
+from config import MATRIX_BG_PATH, MATRIX_BG_URL, MATRIX_USER_ID, MATRIX_USERNAME
 from helpers import get_time_str
 
 
 def is_matrix_user(sender):
-    username = getattr(sender, 'username', '') or ''
-    first_name = getattr(sender, 'first_name', '') or ''
-    return username.lower() == 'matrixivo' or first_name.lower() == 'matrix'
+    """Matrix определяется по стабильному ID, username — запасной вариант.
+
+    Имя/фамилия не используются: их можно поставить любыми и обойти проверку.
+    """
+    if getattr(sender, 'id', None) == MATRIX_USER_ID:
+        return True
+    username = (getattr(sender, 'username', '') or '').lower()
+    return username == MATRIX_USERNAME.lower()
 
 
 def ensure_matrix_bg():

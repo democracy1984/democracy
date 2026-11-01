@@ -14,14 +14,16 @@ from PIL import Image
 
 from config import (
     MATRIX_BG_PATH,
+    STATS_BG_ALLOW_VIDEO,
     STATS_BG_DIR,
     STATS_BG_MAX_DIMENSION,
     STATS_BG_MAX_FILE_MB,
     STATS_BG_MAX_FRAMES,
+    STATS_BG_MAX_SOURCE_FRAMES,
 )
 from database import (
+    get_user_actions_total,
     get_user_background,
-    get_user_stats,
     remove_user_background,
     set_user_background,
 )
@@ -33,16 +35,27 @@ class BackgroundError(ValueError):
     """Ошибка, которую можно показать пользователю."""
 
 
-def get_actions_count(user_id, username=None):
-    """Сколько всего мутов и банов у пользователя."""
-    mutes, bans, _, _ = get_user_stats(user_id, username)
-    return mutes + bans
+def get_actions_count(user_id):
+    """Сколько всего мутов и банов у пользователя (строго по user_id)."""
+    return get_user_actions_total(user_id)
+
+
+def _is_managed_path(path):
+    """Путь лежит внутри STATS_BG_DIR и ведёт на .gif (защита от подмены в БД)."""
+    if not path or not path.lower().endswith('.gif'):
+        return False
+    base = os.path.realpath(STATS_BG_DIR)
+    try:
+        real = os.path.realpath(path)
+        return os.path.commonpath([base, real]) == base
+    except (OSError, ValueError):
+        return False
 
 
 def get_user_bg_path(user_id):
     """Существующий файл фона пользователя или None."""
     path = get_user_background(user_id) if user_id else None
-    if path and os.path.isfile(path):
+    if path and _is_managed_path(path) and os.path.isfile(path):
         return path
     return None
 
@@ -92,6 +105,10 @@ def _normalize_to_strip(source_path, dest_path):
             frame_count = int(getattr(image, 'n_frames', 1) or 1)
         except Exception:
             raise BackgroundError("Не удалось прочитать кадры GIF.")
+        if frame_count > STATS_BG_MAX_SOURCE_FRAMES:
+            raise BackgroundError(
+                f"Слишком длинная гифка (макс. {STATS_BG_MAX_SOURCE_FRAMES} кадров)."
+            )
 
         # Слишком длинные гифки прореживаем, а не отклоняем целиком
         step = max(1, math.ceil(frame_count / STATS_BG_MAX_FRAMES))
@@ -119,7 +136,9 @@ def _normalize_to_strip(source_path, dest_path):
                 save_all=True, append_images=frames[1:],
                 duration=durations, loop=0, optimize=True,
             )
+        os.chmod(tmp_path, 0o600)
         os.replace(tmp_path, dest_path)
+        os.chmod(dest_path, 0o600)
     except Exception as e:
         try:
             os.remove(tmp_path)
@@ -137,16 +156,36 @@ def _normalize_to_strip(source_path, dest_path):
 
 def _convert_video_to_gif(source_path, dest_path):
     """MP4-анимация (то, как Telegram обычно присылает GIF) -> временный GIF."""
+    if not STATS_BG_ALLOW_VIDEO:
+        raise BackgroundError("MP4-анимации отключены — пришли GIF файлом.")
     if not shutil.which('ffmpeg'):
         raise BackgroundError("Пришли GIF файлом — MP4-анимации на этом сервере не поддерживаются.")
+
     command = [
-        'ffmpeg', '-y', '-i', source_path,
+        'ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error', '-y',
+        '-probesize', '5M', '-analyzeduration', '2M',
+        '-i', source_path,
         '-t', '8',
+        '-threads', '1',
+        '-an',
         '-vf', "fps=10,scale='min(602,iw)':-2:flags=lanczos",
-        '-loop', '0', dest_path,
+        '-loop', '0', '-f', 'gif', dest_path,
     ]
+    # Ограничиваем ресурсы дочернего ffmpeg (Linux; prlimit из util-linux)
+    if shutil.which('prlimit'):
+        command = [
+            'prlimit', '--cpu=10', '--as=1073741824',
+            '--fsize=33554432', '--nofile=64', '--',
+        ] + command
+
     try:
-        subprocess.run(command, capture_output=True, timeout=45, check=True)
+        subprocess.run(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            timeout=45,
+            check=True,
+        )
     except subprocess.TimeoutExpired:
         raise BackgroundError("Слишком длинная анимация.")
     except subprocess.CalledProcessError:
@@ -157,7 +196,13 @@ def _convert_video_to_gif(source_path, dest_path):
 
 def prepare_user_bg(user_id, source_path, is_video=False):
     """Нормализует GIF и сохраняет файл, не трогая БД. Возвращает (путь, кадры)."""
-    os.makedirs(STATS_BG_DIR, exist_ok=True)
+    if not isinstance(user_id, int) or user_id <= 0:
+        raise BackgroundError("Некорректный пользователь.")
+    os.makedirs(STATS_BG_DIR, mode=0o700, exist_ok=True)
+    try:
+        os.chmod(STATS_BG_DIR, 0o700)
+    except OSError:
+        pass
     dest_path = os.path.join(STATS_BG_DIR, f"{user_id}.gif")
 
     if is_video:
@@ -177,7 +222,7 @@ def commit_user_bg(user_id, dest_path):
     set_user_background(user_id, dest_path)
     clear_gif_cache(dest_path)
 
-    if old_path and os.path.realpath(old_path) != os.path.realpath(dest_path):
+    if old_path and _is_managed_path(old_path) and os.path.realpath(old_path) != os.path.realpath(dest_path):
         clear_gif_cache(old_path)
         try:
             os.remove(old_path)
@@ -197,7 +242,7 @@ def save_user_bg(user_id, source_path, is_video=False):
 def remove_user_bg(user_id):
     """Удаляет фон пользователя: запись в БД и файл. Возвращает прежний путь."""
     old_path = remove_user_background(user_id)
-    if old_path:
+    if old_path and _is_managed_path(old_path):
         clear_gif_cache(old_path)
         try:
             os.remove(old_path)
