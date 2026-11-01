@@ -3,3 +3,4 @@
 
 telethon==1.44.0
 pillow==12.3.0
+imageio-ffmpeg==0.7.0

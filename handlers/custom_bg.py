@@ -111,6 +111,8 @@ async def handle_setbg(event):
         return
 
     size = getattr(document, 'size', 0) or 0
+    print(f"[*] {get_time_str()} /setbg от {sender.id}: mime={getattr(document, 'mime_type', None)!r}, "
+          f"kind={kind}, size={size}")
     if size > STATS_BG_MAX_FILE_MB * 1024 * 1024:
         await event.reply(f"📦 Файл слишком большой (макс. {STATS_BG_MAX_FILE_MB} МБ).")
         return
@@ -131,6 +133,7 @@ async def handle_setbg(event):
     try:
         downloaded_path = await message.download_media(file=tmp_path)
         if not downloaded_path:
+            print(f"[-] /setbg {sender.id}: download_media вернул None")
             await event.reply("❌ Не удалось скачать файл. Попробуй ещё раз.")
             return
 
@@ -141,6 +144,7 @@ async def handle_setbg(event):
                 )
             commit_user_bg(sender.id, dest_path)
         except BackgroundError as e:
+            print(f"[-] /setbg {sender.id}: {e}")
             await event.reply(f"❌ {e}")
             return
         except Exception as e:

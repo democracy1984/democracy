@@ -12,6 +12,11 @@ import tempfile
 
 from PIL import Image
 
+try:
+    import imageio_ffmpeg
+except ImportError:  # пакет опционален: GIF/WEBP работают и без него
+    imageio_ffmpeg = None
+
 from config import (
     MATRIX_BG_PATH,
     STATS_BG_ALLOW_VIDEO,
@@ -154,15 +159,58 @@ def _normalize_to_strip(source_path, dest_path):
         return len(frames)
 
 
+def ffmpeg_path():
+    """Ищет ffmpeg: env → PATH → типовые пути → бинарник из imageio-ffmpeg."""
+    explicit = os.environ.get('FFMPEG_BINARY')
+    if explicit and os.path.isfile(explicit) and os.access(explicit, os.X_OK):
+        return explicit
+
+    found = shutil.which('ffmpeg')
+    if found:
+        return found
+
+    for candidate in (
+        '/usr/bin/ffmpeg',
+        '/usr/local/bin/ffmpeg',
+        '/bin/ffmpeg',
+        os.path.expanduser('~/.local/bin/ffmpeg'),
+        '/opt/ffmpeg/bin/ffmpeg',
+    ):
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+
+    if imageio_ffmpeg is not None:
+        try:
+            return imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception as e:
+            print(f"[-] imageio-ffmpeg не смог отдать бинарник: {e}")
+    return None
+
+
+def ffmpeg_status():
+    """Строка для лога при старте."""
+    if not STATS_BG_ALLOW_VIDEO:
+        return "MP4-фоны отключены (STATS_BG_ALLOW_VIDEO=False)"
+    path = ffmpeg_path()
+    if path:
+        return f"ffmpeg найден: {path}"
+    return "ffmpeg не найден — MP4-фоны недоступны (GIF/WEBP работают)"
+
+
 def _convert_video_to_gif(source_path, dest_path):
     """MP4-анимация (то, как Telegram обычно присылает GIF) -> временный GIF."""
     if not STATS_BG_ALLOW_VIDEO:
         raise BackgroundError("MP4-анимации отключены — пришли GIF файлом.")
-    if not shutil.which('ffmpeg'):
-        raise BackgroundError("Пришли GIF файлом — MP4-анимации на этом сервере не поддерживаются.")
+    ffmpeg = ffmpeg_path()
+    if not ffmpeg:
+        print("[-] ffmpeg не найден: проверь PATH, FFMPEG_BINARY или установи imageio-ffmpeg")
+        raise BackgroundError(
+            "На сервере не найден ffmpeg. Установи ffmpeg или imageio-ffmpeg "
+            "(pip install imageio-ffmpeg), либо пришли GIF файлом."
+        )
 
     command = [
-        'ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error', '-y',
+        ffmpeg, '-nostdin', '-hide_banner', '-loglevel', 'error', '-y',
         '-probesize', '5M', '-analyzeduration', '2M',
         '-i', source_path,
         '-t', '8',
@@ -187,8 +235,11 @@ def _convert_video_to_gif(source_path, dest_path):
             check=True,
         )
     except subprocess.TimeoutExpired:
+        print(f"[-] ffmpeg timeout при конвертации {source_path}")
         raise BackgroundError("Слишком длинная анимация.")
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        stderr = (e.stderr or b'').decode('utf-8', 'replace').strip()
+        print(f"[-] ffmpeg ошибка (код {e.returncode}): {stderr[-1500:] or '<пусто>'}")
         raise BackgroundError("Не удалось сконвертировать анимацию.")
     if not os.path.isfile(dest_path):
         raise BackgroundError("Не удалось сконвертировать анимацию.")

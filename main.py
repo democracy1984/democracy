@@ -14,6 +14,7 @@ from telethon.tl.types import InputStickerSetShortName
 import os
 
 import state
+from backgrounds import ffmpeg_status
 from bots import MODS_TO_RESOLVE, bots_label
 from client import client
 from config import ALLOWED_MODS, STICKER_PACK_NAME
@@ -41,6 +42,8 @@ async def main():
         os.chmod(client.session.filename, 0o600)
     except OSError:
         pass
+
+    print(f"[*] {ffmpeg_status()}")
 
     # Инициализируем БД структуру
     init_db()
