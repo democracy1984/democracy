@@ -25,6 +25,7 @@ from scraping import auto_scrape_history
 from handlers import chat_actions  # noqa: F401
 from handlers import moderation  # noqa: F401
 from handlers import commands  # noqa: F401
+from handlers import custom_bg  # noqa: F401
 from handlers import pm_dialogs  # noqa: F401
 from handlers import reactions  # noqa: F401
 

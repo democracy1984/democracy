@@ -12,8 +12,9 @@ from telethon import events
 
 import state
 from achievements import ACHIEVEMENTS
+from backgrounds import resolve_stats_bg
 from client import client
-from config import MATRIX_BG_PATH, USER_COOLDOWN_SECONDS
+from config import USER_COOLDOWN_SECONDS, STATS_BG_MIN_ACTIONS
 from database import (
     get_chat_stats,
     get_chats_summary,
@@ -26,7 +27,6 @@ from database import (
 )
 from helpers import check_and_update_cooldown, get_time_str
 from identity import build_display_name, sync_target_identity
-from matrix_bg import is_matrix_user
 from rendering import render_telegram_bubble
 
 
@@ -329,6 +329,7 @@ async def handle_commands(event):
         sync_target_identity(target)
 
         mutes, bans, chats, reasons = get_user_stats(target_id, target_username)
+        stats_bg = resolve_stats_bg(target)
 
         if event.is_private:
             display_name_esc = html.escape(display_name)
@@ -366,7 +367,7 @@ async def handle_commands(event):
             if mutes == 0 and bans == 0:
                 img_bio = render_telegram_bubble('Статистика', [
                     (f'Статистика для {display_name}', ['Нарушений в базе нет.']),
-                ], strip_gif_path=MATRIX_BG_PATH if is_matrix_user(sender) else None,
+                ], strip_gif_path=stats_bg,
                    strip_heading=f'Статистика для {display_name}')
             else:
                 merged_chats = defaultdict(int)
@@ -383,7 +384,7 @@ async def handle_commands(event):
                     (f'Нарушения: {display_name}', [f'Мутов: {mutes}', f'Банов: {bans}']),
                     ('Активность по чатам', chat_lines),
                     ('Основные причины', reason_lines),
-                ], strip_gif_path=MATRIX_BG_PATH if is_matrix_user(sender) else None,
+                ], strip_gif_path=stats_bg,
                    strip_heading=f'Нарушения: {display_name}')
             await client.send_file(event.chat_id, img_bio, reply_to=event.id)
             print(f"[+] {get_time_str()} Отправлена картинка /stats в публичный чат {event.chat_id}")
@@ -416,6 +417,8 @@ async def handle_commands(event):
             f"🔎 /top &lt;название|ID&gt; — Статистика конкретного чата\n"
             f"🌍 /globaltop — Общий топ-15 нарушителей по всем чатам\n"
             f"⭐ /progress — Ваши достижения\n"
+            f"🎨 /setbg — Свой GIF-фон для /stats (после {STATS_BG_MIN_ACTIONS} мутов+банов, только в ЛС)\n"
+            f"🗑 /setbg off — Убрать свой фон\n"
             f"❓ /help — Список всех доступных команд\n"
             f"🗂 /chats — Список чатов, в которых состоит бот\n"
             f"🔕 /stopspamming — Больше не получать уведомления в ЛС\n"

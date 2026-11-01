@@ -70,6 +70,13 @@ def init_db():
             user_id INTEGER PRIMARY KEY
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_backgrounds (
+            user_id INTEGER PRIMARY KEY,
+            file_path TEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_user_id ON actions (user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_chat_id ON actions (chat_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_action_type ON actions (action_type)')
@@ -111,6 +118,39 @@ def save_pm_intro_sent(user_id: int):
     conn = get_conn()
     conn.execute("INSERT OR IGNORE INTO pm_intro_sent (user_id) VALUES (?)", (user_id,))
     conn.commit()
+
+
+def get_user_background(user_id: int):
+    """Путь к сохранённому фону пользователя для /stats или None."""
+    cursor = get_conn().cursor()
+    cursor.execute("SELECT file_path FROM user_backgrounds WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    return row[0] if row else None
+
+
+def set_user_background(user_id: int, file_path: str):
+    """Сохраняет/обновляет путь к фону пользователя."""
+    conn = get_conn()
+    conn.execute('''
+        INSERT INTO user_backgrounds (user_id, file_path, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+            file_path = excluded.file_path,
+            updated_at = CURRENT_TIMESTAMP
+    ''', (user_id, file_path))
+    conn.commit()
+
+
+def remove_user_background(user_id: int):
+    """Удаляет запись о фоне и возвращает прежний путь (или None)."""
+    conn = get_conn()
+    cursor = conn.execute("SELECT file_path FROM user_backgrounds WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    if not row:
+        return None
+    conn.execute("DELETE FROM user_backgrounds WHERE user_id = ?", (user_id,))
+    conn.commit()
+    return row[0]
 
 
 def migrate_legacy_chat_ids():

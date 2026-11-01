@@ -16,6 +16,13 @@ EMOJI_RE = re.compile(
     r'[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u20E3]'
 )
 
+# Геометрия карточки (общая для рендера и нормализации пользовательских фонов)
+CARD_WIDTH = 650
+CARD_PADDING = 24
+CARD_LINE_HEIGHT = 27
+CARD_STRIP_HEIGHT = CARD_LINE_HEIGHT + 18
+CARD_STRIP_SIZE = (CARD_WIDTH - CARD_PADDING * 2, CARD_STRIP_HEIGHT)
+
 # Кэш уже нарезанных кадров фона: ключ (путь, mtime, размер, шаг)
 _GIF_STRIP_CACHE = {}
 
@@ -118,12 +125,20 @@ def gif_strip_frames(path, strip_size, step=GIF_FRAME_STEP):
     return frames, durations
 
 
+def clear_gif_cache(path):
+    """Удаляет из кэша кадры указанного файла (после замены или удаления фона)."""
+    real = os.path.realpath(path)
+    for key in list(_GIF_STRIP_CACHE):
+        if key[0] == real:
+            del _GIF_STRIP_CACHE[key]
+
+
 def render_telegram_bubble(title, sections, strip_gif_path=None, strip_heading=None):
     """Рисует карточку в стиле прежнего HTML-шаблона без браузера.
     Если заданы strip_gif_path и strip_heading — вместо заголовка этой секции вставляется
     обрезанная по ширине анимированная гифка (карточка сохраняется как GIF), иначе — статичный PNG."""
-    width, padding, line_height = 650, 24, 27
-    strip_height = line_height + 18
+    width, padding, line_height = CARD_WIDTH, CARD_PADDING, CARD_LINE_HEIGHT
+    strip_height = CARD_STRIP_HEIGHT
     font = ImageFont.truetype(find_font('DejaVuSans.ttf'), 16)
     bold_font = ImageFont.truetype(find_font('DejaVuSans-Bold.ttf'), 17)
     emoji_font = None
@@ -200,7 +215,7 @@ def render_telegram_bubble(title, sections, strip_gif_path=None, strip_heading=N
 
     if any(is_strip(heading) for heading, _ in prepared_sections):
         try:
-            strip_size = (width - padding * 2, strip_height)
+            strip_size = CARD_STRIP_SIZE
             frames, durations = gif_strip_frames(strip_gif_path, strip_size, GIF_FRAME_STEP)
             base, strip_y = draw_card(Image.new('RGB', card_size, '#0e1621'))
             overlay = Image.new('RGBA', strip_size, (0, 0, 0, 110))

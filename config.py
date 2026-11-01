@@ -42,3 +42,15 @@ USER_COOLDOWN_SECONDS = 10
 
 # --- ДИАЛОГИ ДЛЯ ОТПРАВКИ В ЛС ---
 PM_DIALOGS_REFRESH_SECONDS = 60
+
+# --- СВОЙ ФОН ДЛЯ /stats ---
+# Право на свой фон: столько мутов + банов нужно набрать
+STATS_BG_MIN_ACTIONS = 100
+# Куда складываются пользовательские GIF (в git не попадает)
+STATS_BG_DIR = "media/user_bg"
+# Ограничения загружаемого файла
+STATS_BG_MAX_FILE_MB = 8
+STATS_BG_MAX_FRAMES = 150
+STATS_BG_MAX_DIMENSION = 2048
+# Не чаще одного обновления фона раз в N секунд
+STATS_BG_UPLOAD_COOLDOWN_SECONDS = 30
