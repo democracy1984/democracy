@@ -29,6 +29,21 @@ def parse_moderation_message(message):
     ]):
         return None
 
+    # Негации с глаголом-связкой: «non è stato bannato», «was not banned»,
+    # «не был забанен» — тоже не наказания
+    if re.search(
+        r'\bnon\s+(?:è\s+stato\s+)?(?:bannat[oaie]|mutat[oaie]|silenziato|silenziata)\b',
+        text_lower,
+    ):
+        return None
+    if re.search(r'\bnot\s+(?:been\s+)?(?:banned|muted)\b', text_lower):
+        return None
+    if re.search(
+        r'\bне\s+(?:был[аи]?\s+)?(?:забанен[а]?|заглушен[а]?|замучен[а]?|заблокирован[а]?)\b',
+        text_lower,
+    ):
+        return None
+
     # Информационные сообщения ботов (описания, инструкции) — не наказания
     if any(w in text_lower for w in [
         "how it works?", "privacy policy", "you add this bot", "this bot stops",

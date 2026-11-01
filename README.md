@@ -54,7 +54,7 @@ ID ботов не дублируются.
 ├── client.py               # общий Telegram-клиент (сессия из secrets/)
 ├── state.py                # изменяемое состояние в памяти
 ├── database.py             # SQLite: единое соединение, таблицы, статистика
-├── parsing.py              # парсер сообщений MissRose / THM Chatbot
+├── parsing.py              # парсер сообщений всех ботов-модераторов
 ├── achievements.py         # список достижений и проверка новых
 ├── notifications.py        # ЛС: первое сообщение с PS, opt-out, FloodWait
 ├── identity.py             # синхронизация имён/username из Telegram в БД
