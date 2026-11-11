@@ -10,12 +10,12 @@ from collections import defaultdict
 
 from telethon import events
 
-import state
-from achievements import ACHIEVEMENTS
-from backgrounds import resolve_stats_bg
-from client import client
+from core import state
+from services.achievements import ACHIEVEMENTS
+from services.backgrounds import resolve_stats_bg
+from core.client import client
 from config import USER_COOLDOWN_SECONDS, STATS_BG_MIN_ACTIONS
-from database import (
+from core.database import (
     get_chat_stats,
     get_chats_summary,
     get_chats_top,
@@ -25,9 +25,9 @@ from database import (
     remove_pm_opt_out,
     save_pm_opt_out,
 )
-from helpers import check_and_update_cooldown, get_time_str
-from identity import build_display_name, sync_target_identity
-from rendering import render_telegram_bubble
+from core.helpers import check_and_update_cooldown, get_time_str
+from services.identity import build_display_name, sync_target_identity
+from services.rendering import render_telegram_bubble
 
 
 async def resolve_current_names(user_ids):

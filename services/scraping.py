@@ -2,18 +2,18 @@
 
 Запускается один раз при старте, если база пуста. Единственная
 реализация скрапинга в проекте (отдельный scraper.py удалён).
-Список ботов-модераторов берётся из bots.py (через config.ALLOWED_MODS).
+Список ботов-модераторов берётся из core/bots.py (через config.ALLOWED_MODS).
 """
 
 import asyncio
 
 from telethon import errors, utils
 
-from client import client
+from core.client import client
 from config import ALLOWED_MODS
-from database import save_batch_actions
-from helpers import get_time_str
-from parsing import parse_moderation_message
+from core.database import save_batch_actions
+from core.helpers import get_time_str
+from services.parsing import parse_moderation_message
 
 
 async def auto_scrape_history():

@@ -4,7 +4,7 @@ import os
 import urllib.request
 
 from config import MATRIX_BG_PATH, MATRIX_BG_URL, MATRIX_USER_ID, MATRIX_USERNAME
-from helpers import get_time_str
+from core.helpers import get_time_str
 
 
 def is_matrix_user(sender):

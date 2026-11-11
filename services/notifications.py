@@ -11,11 +11,11 @@ import time
 
 from telethon import errors
 
-import state
-from client import client
+from core import state
+from core.client import client
 from config import PM_DIALOGS_REFRESH_SECONDS
-from database import save_pm_intro_sent
-from helpers import get_time_str
+from core.database import save_pm_intro_sent
+from core.helpers import get_time_str
 
 _pm_dialogs_refreshed_at = 0.0
 

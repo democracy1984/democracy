@@ -12,11 +12,11 @@ import random
 from telethon import events, errors, utils
 from telethon.tl import types
 
-import state
-from client import client
+from core import state
+from core.client import client
 from config import USER_COOLDOWN_SECONDS
-from database import update_chat_title
-from helpers import check_and_update_cooldown, get_time_str
+from core.database import update_chat_title
+from core.helpers import check_and_update_cooldown, get_time_str
 
 
 async def send_greeting_sticker(chat_id):

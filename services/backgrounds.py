@@ -27,14 +27,14 @@ from config import (
     STATS_BG_MAX_FRAMES,
     STATS_BG_MAX_SOURCE_FRAMES,
 )
-from database import (
+from core.database import (
     get_user_actions_total,
     get_user_background,
     remove_user_background,
     set_user_background,
 )
-from matrix_bg import is_matrix_user
-from rendering import CARD_STRIP_SIZE, clear_gif_cache, crop_cover
+from services.matrix_bg import is_matrix_user
+from services.rendering import CARD_STRIP_SIZE, clear_gif_cache, crop_cover
 
 
 class BackgroundError(ValueError):

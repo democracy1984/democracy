@@ -2,7 +2,7 @@
 
 ЕДИНСТВЕННОЕ место, где задаются боты-модераторы:
   * MODERATOR_BOTS — боты, которых отслеживает мониторинг модерации
-    (handlers/moderation.py) и исторический скрапер (scraping.py);
+    (handlers/moderation.py) и исторический скрапер (services/scraping.py);
   * ALLOWED_MODS   — плоский список их ID для фильтрации событий.
 
 Часть ботов задана по username (bot_username) и резолвится в ID

@@ -1,8 +1,9 @@
 """Изменяемое состояние процесса (бывшие глобальные переменные main.py).
 
 ВАЖНО: EAGLE_STICKER и PIGEON_STICKER переприсваиваются в main().
-Обращаться к ним нужно через `import state` / `state.EAGLE_STICKER`,
-а не через `from state import EAGLE_STICKER` — иначе получите старое значение.
+Обращаться к ним нужно через `from core import state` (или
+`import core.state as state`) и `state.EAGLE_STICKER`, а не через
+`from core.state import EAGLE_STICKER` — иначе получите старое значение.
 """
 
 # id пользователей, которые отписались от рассылки в ЛС

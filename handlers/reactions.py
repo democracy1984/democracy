@@ -10,8 +10,8 @@ from telethon import events
 from telethon.tl.functions.messages import SendReactionRequest
 from telethon.tl.types import ReactionEmoji
 
-from client import client
-from helpers import get_time_str
+from core.client import client
+from core.helpers import get_time_str
 
 
 @client.on(events.NewMessage)

@@ -1,27 +1,26 @@
 """Точка входа юзербота.
 
-Клиент создаётся в client.py, состояние — в state.py, список
-мониторируемых ботов — в bots.py, хендлеры регистрируются при импорте
-пакета handlers. Логика запуска не менялась по сравнению с прежним
-монолитным main.py.
+Клиент создаётся в core/client.py, состояние — в core/state.py,
+список мониторируемых ботов — в core/bots.py, хендлеры регистрируются
+при импорте пакета handlers. Логика запуска не менялась по сравнению
+с прежним монолитным main.py.
 """
 
 import asyncio
+import os
 
 from telethon.tl.functions.messages import GetStickerSetRequest
 from telethon.tl.types import InputStickerSetShortName
 
-import os
-
-import state
-from backgrounds import ffmpeg_status
-from bots import MODS_TO_RESOLVE, bots_label
-from client import client
+from core import state
+from services.backgrounds import ffmpeg_status
+from core.bots import MODS_TO_RESOLVE, bots_label
+from core.client import client
 from config import ALLOWED_MODS, STICKER_PACK_NAME
-from database import check_db_empty, init_db, load_pm_intro_sent, load_pm_opt_out
-from helpers import get_time_str
-from matrix_bg import ensure_matrix_bg
-from scraping import auto_scrape_history
+from core.database import check_db_empty, init_db, load_pm_intro_sent, load_pm_opt_out
+from core.helpers import get_time_str
+from services.matrix_bg import ensure_matrix_bg
+from services.scraping import auto_scrape_history
 
 # Импорт хендлеров регистрирует их на клиенте.
 # Порядок сохранён таким же, как был в прежнем main.py.
@@ -59,7 +58,7 @@ async def main():
     # Фоновая гифка для Matrix (скачивается один раз)
     await asyncio.to_thread(ensure_matrix_bg)
 
-    # Динамически резолвим ID ботов из bots.py (например, MissRose),
+    # Динамически резолвим ID ботов из core/bots.py (например, MissRose),
     # у которых в конфиге задан только username
     for bot in MODS_TO_RESOLVE:
         try:

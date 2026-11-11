@@ -12,6 +12,7 @@ secrets/
 
 # --- СТАРЫЕ КОПИИ / РЕЗЕРВНЫЕ ФАЙЛЫ ---
 old/
+backups/
 *.bak
 *.py.bak
 

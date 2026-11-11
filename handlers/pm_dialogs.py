@@ -6,9 +6,9 @@
 
 from telethon import events
 
-import state
-from client import client
-from identity import sync_sender_from_event
+from core import state
+from core.client import client
+from services.identity import sync_sender_from_event
 
 
 @client.on(events.NewMessage)

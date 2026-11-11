@@ -1,7 +1,7 @@
 """Настройки и константы проекта.
 
 Все ключевые значения (API, сессии, папки, тайминги) — здесь.
-Список ботов-модераторов живёт в отдельном файле bots.py, здесь
+Список ботов-модераторов живёт в отдельном файле core/bots.py, здесь
 он реэкспортируется как ALLOWED_MODS для удобства импорта.
 API-ключи можно переопределить через переменные окружения
 TELEGRAM_API_ID / TELEGRAM_API_HASH.
@@ -9,7 +9,7 @@ TELEGRAM_API_ID / TELEGRAM_API_HASH.
 
 import os
 
-from bots import ALLOWED_MODS  # noqa: F401 (реэкспорт)
+from core.bots import ALLOWED_MODS  # noqa: F401 (реэкспорт)
 
 # --- API TELEGRAM ---
 # По умолчанию — публичные ключи из документации Telethon (для тестов).

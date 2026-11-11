@@ -11,22 +11,22 @@ import tempfile
 
 from telethon import events
 
-from backgrounds import (
+from services.backgrounds import (
     BackgroundError,
     commit_user_bg,
     get_actions_count,
     prepare_user_bg,
     remove_user_bg,
 )
-from client import client
+from core.client import client
 from config import (
     STATS_BG_DIR,
     STATS_BG_MAX_FILE_MB,
     STATS_BG_MIN_ACTIONS,
     STATS_BG_UPLOAD_COOLDOWN_SECONDS,
 )
-from helpers import check_and_update_cooldown, get_time_str
-from matrix_bg import is_matrix_user
+from core.helpers import check_and_update_cooldown, get_time_str
+from services.matrix_bg import is_matrix_user
 
 # Не больше двух одновременных обработок GIF (Pillow/ffmpeg)
 _PROCESS_SEMAPHORE = asyncio.Semaphore(2)

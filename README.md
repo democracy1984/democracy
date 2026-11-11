@@ -26,56 +26,60 @@
 
 ## Мониторируемые боты
 
-Все боты задаются в одном месте — файл `bots.py` (список `MODERATOR_BOTS`).
+Все боты задаются в одном месте — файл `core/bots.py` (список `MODERATOR_BOTS`).
 Каждая запись содержит имя, статический ID (если известен) и/или username
 для динамического резолва при старте.
 
 | Бот | Как попадает в мониторинг |
 |---|---|
-| **THM Chatbot** | Известный ID `7945156565` задан в `bots.py` (`bot_id`), попадает в `ALLOWED_MODS` сразу |
-| **Iris** (`@iris_moon_bot`) | ID `5434504334` задан в `bots.py`, мут-формат «лишается права слова» поддержан в `parsing.py` |
-| **Sentinel Prime** (`@SentinelPrime_bot`) | ID `7847367200` задан в `bots.py`, баны вида «Пользователь @user не справился и был забанен» поддержаны |
-| **OrgRobot** (`@orgrobot`) | ID `787057350` задан в `bots.py`; сам бот в чат обычно пишет только служебные сообщения (проверка прав, приветствие), они отфильтровываются |
-| **GroupHelp** (`@GroupHelpBot`) | ID `162726413` задан в `bots.py`, итальянский формат «@user [ID] bannato.» / «mutato» поддержан в `parsing.py` |
-| **MissRose** (`@MissRose_bot`) | ID резолвится динамически при старте в `main.py` по `bot_username` и добавляется в `ALLOWED_MODS`. Если резолв не удался — остаётся только ID из `bots.py` |
+| **THM Chatbot** | Известный ID `7945156565` задан в `core/bots.py` (`bot_id`), попадает в `ALLOWED_MODS` сразу |
+| **Iris** (`@iris_moon_bot`) | ID `5434504334` задан в `core/bots.py`, мут-формат «лишается права слова» поддержан в `services/parsing.py` |
+| **Sentinel Prime** (`@SentinelPrime_bot`) | ID `7847367200` задан в `core/bots.py`, баны вида «Пользователь @user не справился и был забанен» поддержаны |
+| **OrgRobot** (`@orgrobot`) | ID `787057350` задан в `core/bots.py`; сам бот в чат обычно пишет только служебные сообщения (проверка прав, приветствие), они отфильтровываются |
+| **GroupHelp** (`@GroupHelpBot`) | ID `162726413` задан в `core/bots.py`, итальянский формат «@user [ID] bannato.» / «mutato» поддержан в `services/parsing.py` |
+| **MissRose** (`@MissRose_bot`) | ID резолвится динамически при старте в `main.py` по `bot_username` и добавляется в `ALLOWED_MODS`. Если резолв не удался — остаётся только ID из `core/bots.py` |
 
-`ALLOWED_MODS` — плоский рабочий список ID, который строится из `bots.py`
+`ALLOWED_MODS` — плоский рабочий список ID, который строится из `core/bots.py`
 и реэкспортируется через `config.py` (чтобы существующие импорты не менялись).
 Фильтрация событий: `handlers/moderation.py` пропускает только сообщения от
 `sender_id in ALLOWED_MODS`.
 
-**Чтобы добавить/убрать бота** — правьте только `bots.py`, больше нигде
+**Чтобы добавить/убрать бота** — правьте только `core/bots.py`, больше нигде
 ID ботов не дублируются.
 
 ## Структура проекта
 
 ```
 ├── main.py                 # точка входа: клиент → БД → стикеры → скрап → run
-├── config.py               # API, сессии, папки, тайминги (боты — реэкспорт из bots.py)
-├── bots.py                 # ЕДИНСТВЕННОЕ место со списком ботов-модераторов
-├── client.py               # общий Telegram-клиент (сессия из secrets/)
-├── state.py                # изменяемое состояние в памяти
-├── database.py             # SQLite: единое соединение, таблицы, статистика
-├── parsing.py              # парсер сообщений всех ботов-модераторов
-├── achievements.py         # список достижений и проверка новых
-├── notifications.py        # ЛС: первое сообщение с PS, opt-out, FloodWait
-├── identity.py             # синхронизация имён/username из Telegram в БД
-├── rendering.py            # рендер карточек статистики на PIL (PNG/GIF)
-├── backgrounds.py          # пользовательские GIF-фоны для /stats
-├── scraping.py             # исторический сбор логов по всем чатам
-├── matrix_bg.py            # «матричный» фон для пользователя Matrixivo
-├── helpers.py              # время, кулдаун пользователей
-├── getchatid.py            # утилита: список чатов с ID
-├── backfill_names.py       # разовая синхронизация имён всех пользователей
+├── config.py               # API, сессии, папки, тайминги
+├── core/                   # ядро
+│   ├── bots.py             # список ботов-модераторов (единственное место)
+│   ├── client.py           # общий Telegram-клиент
+│   ├── database.py         # SQLite: соединение, таблицы, статистика
+│   ├── helpers.py          # время, кулдаун
+│   └── state.py            # изменяемое состояние
+├── services/               # бизнес-логика
+│   ├── achievements.py     # достижения
+│   ├── backgrounds.py      # пользовательские GIF-фоны /stats
+│   ├── identity.py         # синхронизация имён/username
+│   ├── matrix_bg.py        # фон Matrix
+│   ├── notifications.py    # ЛС: первое сообщение, opt-out, FloodWait
+│   ├── parsing.py          # парсер сообщений ботов
+│   ├── rendering.py        # карточки статистики на PIL
+│   └── scraping.py         # исторический сбор логов
 ├── handlers/
-│   ├── chat_actions.py     # вход участников, смена названия чата
-│   ├── moderation.py       # основной лог действий ботов-модераторов
+│   ├── chat_actions.py     # входы, заявки, смена названия
+│   ├── moderation.py       # лог действий ботов
 │   ├── commands.py         # /stats /top /globaltop /progress /help /chats /stopspamming
-│   ├── custom_bg.py        # /setbg — свой GIF-фон для /stats
-│   ├── pm_dialogs.py       # отслеживание личных диалогов
-│   └── reactions.py        # автореакция 🕊 на слова про свободу/демократию
+│   ├── custom_bg.py        # /setbg
+│   ├── pm_dialogs.py       # личные диалоги
+│   └── reactions.py        # реакция 🕊
+├── tools/
+│   ├── backfill_names.py   # разовая синхронизация имён
+│   └── getchatid.py        # список чатов с ID
 ├── secrets/                # *.session — в git не попадает
-├── requirements.txt        # зависимости
+├── media/                  # пользовательские фоны (в git не попадает)
+├── requirements.txt
 └── bot_stats.db            # база логов (создаётся автоматически)
 ```
 
@@ -108,7 +112,7 @@ python3 -m venv .venv
    попросит номер телефона и код; файл создастся сам.
    `secrets/scraper_session.session` — остаток от старого отдельного скрапера,
    для работы не обязателен.
-3. **Список ботов** — файл `bots.py` (см. раздел выше).
+3. **Список ботов** — файл `core/bots.py` (см. раздел выше).
 4. **Стикерпак** — `STICKER_PACK_NAME` в `config.py`; аккаунт должен иметь
    доступ к паку, иначе стикеры просто не отправляются.
 
@@ -116,7 +120,7 @@ python3 -m venv .venv
 
 ```bash
 .venv/bin/python main.py        # основной юзербот
-.venv/bin/python getchatid.py   # посмотреть ID своих чатов
+.venv/bin/python tools/getchatid.py   # посмотреть ID своих чатов
 ```
 
 При старте аккаунт должен быть уже авторизован. Если база пуста, сначала
@@ -174,7 +178,7 @@ python3 -m venv .venv
 ### Смена имени и username
 
 Имя и username хранятся в записях на момент наказания, поэтому со временем
-могут устареть. `identity.py` синхронизирует их со свежим профилем Telegram,
+могут устареть. `services/identity.py` синхронизирует их со свежим профилем Telegram,
 как только человек снова попадается боту:
 
 - любое входящее сообщение (ЛС или группа) — `handlers/pm_dialogs.py`;
@@ -189,11 +193,11 @@ python3 -m venv .venv
 ### Разовый бэкфилл имён
 
 Синхронизация ленивая — срабатывает, когда человек снова активен. Чтобы
-обновить сразу всю базу, есть `backfill_names.py` (бот должен быть остановлен):
+обновить сразу всю базу, есть `tools/backfill_names.py` (бот должен быть остановлен):
 
 ```bash
-.venv/bin/python backfill_names.py            # обновить все профили
-.venv/bin/python backfill_names.py --dry-run  # предпросмотр без записи
+.venv/bin/python tools/backfill_names.py            # обновить все профили
+.venv/bin/python tools/backfill_names.py --dry-run  # предпросмотр без записи
 ```
 
 Скрипт проходит по всем `user_id` из базы, тянет актуальные профили из
@@ -210,7 +214,7 @@ SQLite `bot_stats.db` (в git не попадает):
 - `user_backgrounds` — путь к пользовательскому GIF-фону для `/stats`.
 
 Пользовательские фоны лежат в `media/user_bg/{user_id}.gif` (в git не попадают).
-Соединение создаётся один раз в `database.py` и переиспользуется
+Соединение создаётся один раз в `core/database.py` и переиспользуется
 (режим WAL, индексы по `user_id`, `chat_id`, `action_type`).
 
 ## Безопасность

@@ -4,11 +4,11 @@
 из Telegram и обновляет имя/username во всех старых записях.
 
 Запуск (бот предварительно остановить — сессия занята):
-    .venv/bin/python backfill_names.py            # обновить
-    .venv/bin/python backfill_names.py --dry-run  # только показать, что изменится
+    .venv/bin/python tools/backfill_names.py            # обновить
+    .venv/bin/python tools/backfill_names.py --dry-run  # только показать, что изменится
 
 Пути можно переопределить переменными окружения (удобно для теста на копии):
-    DEMOCRACY_DB=test.db DEMOCRACY_SESSION_DIR=/tmp/sess .venv/bin/python backfill_names.py
+    DEMOCRACY_DB=test.db DEMOCRACY_SESSION_DIR=/tmp/sess .venv/bin/python tools/backfill_names.py
 
 Скрипт идемпотентен: повторный запуск не находит изменений.
 """
@@ -17,11 +17,14 @@ import asyncio
 import os
 import sys
 
+# Корень проекта в sys.path при запуске python tools/backfill_names.py
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from telethon import errors
 from telethon.tl.types import User
 
-from client import client
-from database import format_display_name, get_conn, init_db, sync_victim_identity
+from core.client import client
+from core.database import format_display_name, get_conn, init_db, sync_victim_identity
 
 
 def get_user_ids():

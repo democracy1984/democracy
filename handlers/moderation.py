@@ -1,6 +1,6 @@
 """Хендлер модерации: мониторинг действий ботов-модераторов.
 
-Список ботов и их ID задаётся в bots.py (реэкспорт через config.ALLOWED_MODS).
+Список ботов и их ID задаётся в core/bots.py (реэкспорт через config.ALLOWED_MODS).
 """
 
 import asyncio
@@ -8,15 +8,15 @@ import random
 
 from telethon import events, errors
 
-import state
-from achievements import check_new_achievements
-from client import client
+from core import state
+from services.achievements import check_new_achievements
+from core.client import client
 from config import ALLOWED_MODS, USER_COOLDOWN_SECONDS
-from database import backfill_victim_user_id, get_user_stats, lookup_user_by_victim_name, save_action
-from helpers import check_and_update_cooldown, get_time_str
-from identity import sync_user_by_id
-from notifications import try_send_pm
-from parsing import parse_moderation_message
+from core.database import backfill_victim_user_id, get_user_stats, lookup_user_by_victim_name, save_action
+from core.helpers import check_and_update_cooldown, get_time_str
+from services.identity import sync_user_by_id
+from services.notifications import try_send_pm
+from services.parsing import parse_moderation_message
 
 
 @client.on(events.NewMessage)

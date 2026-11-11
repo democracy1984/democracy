@@ -1,9 +1,14 @@
 import asyncio
 import os
+import sys
+
+# Корень проекта в sys.path при запуске python tools/getchatid.py
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from telethon import TelegramClient
 
 from config import API_ID, API_HASH, MAIN_SESSION_NAME, SESSION_DIR
+
 
 async def main():
     # Используем ту же сессию 'my_account' из secrets/, чтобы не логиниться заново

@@ -10,9 +10,9 @@ import time
 
 from telethon.tl.types import User
 
-from client import client
-from database import format_display_name, sync_victim_identity
-from helpers import get_time_str
+from core.client import client
+from core.database import format_display_name, sync_victim_identity
+from core.helpers import get_time_str
 
 # Не дёргаем БД чаще раза в минуту на одного пользователя (хот-путь сообщений)
 _SYNC_INTERVAL_SECONDS = 60
