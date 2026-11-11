@@ -38,3 +38,8 @@ dist/
 .vscode/
 *.swp
 .DS_Store
+
+# --- ТЕСТЫ ---
+.pytest_cache/
+.coverage
+htmlcov/

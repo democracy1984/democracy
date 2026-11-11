@@ -247,12 +247,22 @@ def backfill_victim_user_id(victim_name, user_id):
     """Привязывает известный user_id к старым записям, где его не было.
 
     Обновляются только строки с user_id IS NULL (записи с уже известным ID
-    никогда не перезаписываются). Вызывать только когда имя однозначно
-    указывает на этого пользователя. Возвращает число обновлённых строк.
+    никогда не перезаписываются). Если то же имя уже встречается у другого
+    user_id, имя неоднозначно — ничего не меняем. Возвращает число
+    обновлённых строк.
     """
     if not user_id or not victim_name or _junk_name(victim_name):
         return 0
     conn = get_conn()
+
+    cursor = conn.execute('''
+        SELECT 1 FROM actions
+        WHERE victim_name = ? AND user_id IS NOT NULL AND user_id != ?
+        LIMIT 1
+    ''', (victim_name, user_id))
+    if cursor.fetchone() is not None:
+        return 0
+
     cursor = conn.execute('''
         UPDATE actions SET user_id = ?
         WHERE victim_name = ? AND user_id IS NULL

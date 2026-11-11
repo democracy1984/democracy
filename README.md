@@ -1,5 +1,7 @@
 # 🕊 Democracy Userbot
 
+[![tests](https://github.com/democracy1984/democracy/actions/workflows/tests.yml/badge.svg)](https://github.com/democracy1984/democracy/actions/workflows/tests.yml)
+
 Сатирический Telegram-юзербот: следит за действиями ботов-модераторов в группах,
 ведёт статистику мутов и банов, клеит стикеры-голубей в чат и агитирует «жертв
 режима» в личку, раздаёт достижения за нарушения.
@@ -79,7 +81,10 @@ ID ботов не дублируются.
 │   └── getchatid.py        # список чатов с ID
 ├── secrets/                # *.session — в git не попадает
 ├── media/                  # пользовательские фоны (в git не попадает)
+├── tests/                  # pytest-тесты
+├── .github/workflows/      # CI (GitHub Actions)
 ├── requirements.txt
+├── requirements-dev.txt    # зависимости для тестов
 └── bot_stats.db            # база логов (создаётся автоматически)
 ```
 
@@ -97,6 +102,16 @@ python3 -m venv .venv
 (ставится из `requirements.txt`), поэтому системный ffmpeg не обязателен.
 Свой путь можно задать переменной `FFMPEG_BINARY`. GIF и анимированный WEBP
 обрабатываются без него. При старте бот пишет в лог, найден ли ffmpeg.
+
+## Тесты
+
+```bash
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest -q
+```
+
+Тесты не подключаются к Telegram и не требуют сессии или сети. CI:
+`.github/workflows/tests.yml` — Python 3.10, 3.12, 3.13.
 
 ## Настройка
 
