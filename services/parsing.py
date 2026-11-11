@@ -21,49 +21,62 @@ def parse_moderation_message(message):
     duration = "permanent"
     reason = "Не указана"
 
-    # Негации и служебные ответы ботов («не забанен», «право слова вернули»,
-    # «sbannato» = разбанен, «unbanned» = разбанен) — не наказания
-    if any(w in text_lower for w in [
-        "не забанен", "не заблокирован", "не заглушен", "вернули право слова", "снят бан",
-        "unbanned", "unmuted", "sbannato", "smutato", "non bannato", "non mutato",
-    ]):
-        return None
+    # Размут — отдельное событие: его нельзя отбрасывать негационным фильтром
+    is_unmute = (
+        any(w in text_lower for w in [
+            "размучен", "can speak again", "can talk again",
+            "was unmuted", "has been unmuted", "unmuted",
+        ])
+        or bool(re.search(r'\bsmutato\b', text_lower))
+    )
 
-    # Негации с глаголом-связкой: «non è stato bannato», «was not banned»,
-    # «не был забанен» — тоже не наказания
-    if re.search(
-        r'\bnon\s+(?:è\s+stato\s+)?(?:bannat[oaie]|mutat[oaie]|silenziato|silenziata)\b',
-        text_lower,
-    ):
-        return None
-    if re.search(r'\bnot\s+(?:been\s+)?(?:banned|muted)\b', text_lower):
-        return None
-    if re.search(
-        r'\bне\s+(?:был[аи]?\s+)?(?:забанен[а]?|заглушен[а]?|замучен[а]?|заблокирован[а]?)\b',
-        text_lower,
-    ):
-        return None
-
-    # Информационные сообщения ботов (описания, инструкции) — не наказания
-    if any(w in text_lower for w in [
-        "how it works?", "privacy policy", "you add this bot", "this bot stops",
-        "bot permissions:", "i help to moderate", "you can control bot",
-        "you can not control bot", "you cannot control bot", "documentation:",
-    ]):
-        return None
-
-    if any(w in text_lower for w in ["shhh", "quiet now", "помолчи", "заглушен", "мутирован", "тссс", "лишается права слова"]):
-        action_type = "mute"
-    elif re.search(r'\b(?:mutat[oaie]|silenziato|silenziata)\b', text_lower):
-        # GroupHelp (итальянский): «@user [id] mutato.»
-        action_type = "mute"
-    elif any(w in text_lower for w in ["bites the dust", "укусил пыль", "забанен", "banned", "заблокирован"]):
-        action_type = "ban"
-    elif re.search(r'\b(?:bannat[oaie])\b', text_lower):
-        # GroupHelp (итальянский): «@user [id] bannato.»
-        action_type = "ban"
+    if is_unmute:
+        action_type = "unmute"
+        duration = "—"
     else:
-        return None
+        # Негации и служебные ответы ботов («не забанен», «право слова вернули»,
+        # «sbannato» = разбанен, «unbanned» = разбанен) — не наказания
+        if any(w in text_lower for w in [
+            "не забанен", "не заблокирован", "не заглушен", "вернули право слова", "снят бан",
+            "unbanned", "sbannato", "non bannato", "non mutato",
+        ]):
+            return None
+
+        # Негации с глаголом-связкой: «non è stato bannato», «was not banned»,
+        # «не был забанен» — тоже не наказания
+        if re.search(
+            r'\bnon\s+(?:è\s+stato\s+)?(?:bannat[oaie]|mutat[oaie]|silenziato|silenziata)\b',
+            text_lower,
+        ):
+            return None
+        if re.search(r'\bnot\s+(?:been\s+)?(?:banned|muted)\b', text_lower):
+            return None
+        if re.search(
+            r'\bне\s+(?:был[аи]?\s+)?(?:забанен[а]?|заглушен[а]?|замучен[а]?|заблокирован[а]?)\b',
+            text_lower,
+        ):
+            return None
+
+        # Информационные сообщения ботов (описания, инструкции) — не наказания
+        if any(w in text_lower for w in [
+            "how it works?", "privacy policy", "you add this bot", "this bot stops",
+            "bot permissions:", "i help to moderate", "you can control bot",
+            "you can not control bot", "you cannot control bot", "documentation:",
+        ]):
+            return None
+
+        if any(w in text_lower for w in ["shhh", "quiet now", "помолчи", "заглушен", "мутирован", "тссс", "лишается права слова"]):
+            action_type = "mute"
+        elif re.search(r'\b(?:mutat[oaie]|silenziato|silenziata)\b', text_lower):
+            # GroupHelp (итальянский): «@user [id] mutato.»
+            action_type = "mute"
+        elif any(w in text_lower for w in ["bites the dust", "укусил пыль", "забанен", "banned", "заблокирован"]):
+            action_type = "ban"
+        elif re.search(r'\b(?:bannat[oaie])\b', text_lower):
+            # GroupHelp (итальянский): «@user [id] bannato.»
+            action_type = "ban"
+        else:
+            return None
 
     reason_match = re.search(r'(?:Reason|Причина|Motivo|Causa):\s*(.*)', text, re.DOTALL | re.IGNORECASE)
     if reason_match:
@@ -83,6 +96,11 @@ def parse_moderation_message(message):
             victim_id = int(thm_match.group(2))
         except ValueError:
             pass
+        # В имени может быть ссылка: «fraudleaker (https://t.me/fraudleak)»
+        url_match = re.search(r'https?://t\.me/([A-Za-z0-9_]{3,32})', victim_name)
+        if url_match:
+            victim_username = url_match.group(1)
+        victim_name = re.sub(r'\s*\(https?://t\.me/[^)]+\)\s*', ' ', victim_name).strip()
     elif gh_mention:
         victim_username = gh_mention.group(1)
         victim_id = int(gh_mention.group(2))
@@ -118,6 +136,17 @@ def parse_moderation_message(message):
                 prefix = re.sub(r'^(?:utente|user|пользователь)\s+', '', prefix, flags=re.IGNORECASE).strip()
                 if prefix and not victim_name:
                     victim_name = prefix
+
+    # MissRose: «Fine, реля <3 can speak again.»
+    if not victim_name and action_type == "unmute":
+        unmute_name = re.search(
+            r'(?:^|[,.]\s*)(?:Fine,\s*)?(.+?)\s+'
+            r'(?:can speak again|can talk again|was unmuted|has been unmuted)\b',
+            text,
+            re.IGNORECASE,
+        )
+        if unmute_name:
+            victim_name = unmute_name.group(1).strip(' .,')
 
     if not victim_name:
         lines = text.split('\n')

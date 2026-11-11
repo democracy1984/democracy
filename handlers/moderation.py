@@ -17,6 +17,7 @@ from core.helpers import check_and_update_cooldown, get_time_str
 from services.identity import sync_user_by_id
 from services.notifications import try_send_pm
 from services.parsing import parse_moderation_message
+from services.promo import build_promo_text, build_victory_text
 
 
 @client.on(events.NewMessage)
@@ -31,6 +32,24 @@ async def handle_moderation_message(event):
 
         parsed = parse_moderation_message(event.message)
         if not parsed:
+            return
+
+        # Размут — не наказание: сохранять в actions не нужно,
+        # просто празднуем победу демократии в чате
+        if parsed.get('action_type') == 'unmute':
+            chat_title = event.chat.title if event.chat and hasattr(event.chat, 'title') else "Неизвестный чат"
+            try:
+                await asyncio.sleep(random.uniform(0.07, 0.17))
+                await client.send_message(
+                    event.chat_id,
+                    build_victory_text(),
+                    reply_to=event.id,
+                )
+                print(f"[+] {get_time_str()} Размут в чате '{chat_title}' — победа демократии")
+            except errors.FloodWaitError as e:
+                print(f"[-] FloodWait при реакции на размут: {e.seconds} сек.")
+            except Exception as e:
+                print(f"[-] Ошибка реакции на размут: {e}")
             return
 
         # Если бот не дал ни ID, ни username — пробуем найти человека по
@@ -92,11 +111,7 @@ async def handle_moderation_message(event):
         if parsed['user_id'] or parsed['username']:
             await asyncio.sleep(random.uniform(1.18, 1.84))
             action_word = "замутили" if parsed['action_type'] == "mute" else "забанили"
-            promo_text = (
-                f"Тебя совершенно несправедливо {action_word} в чате {chat_title}, это ВОЗМУТИТЕЛЬНО!!!\n"
-                f"ДОВОЛЬНО ЭТО ТЕРПЕТЬ!!! Вставай на путь демократии и свободы выбора!!!\n"
-                f"Присоединяйся к нашему походу за справедливость, распространяй стикер, ВЫБОРЫ ЕСТЬ!!!"
-            )
+            promo_text = build_promo_text(action_word, chat_title)
 
             # Проверка на новые достижения
             mutes, bans, _, _ = get_user_stats(parsed['user_id'], parsed['username'])

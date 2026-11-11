@@ -40,7 +40,7 @@ async def auto_scrape_history():
             try:
                 async for message in client.iter_messages(chat_entity, from_user=mod_id, limit=None):
                     parsed = parse_moderation_message(message)
-                    if parsed:
+                    if parsed and parsed['action_type'] in ('mute', 'ban'):
                         batch.append((
                             utils.get_peer_id(chat_entity),
                             chat_title,
@@ -68,7 +68,7 @@ async def auto_scrape_history():
                 async for message in client.iter_messages(chat_entity, limit=None):
                     if message.sender_id in ALLOWED_MODS:
                         parsed = parse_moderation_message(message)
-                        if parsed:
+                        if parsed and parsed['action_type'] in ('mute', 'ban'):
                             batch.append((
                                 utils.get_peer_id(chat_entity),
                                 chat_title,

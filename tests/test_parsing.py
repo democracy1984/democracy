@@ -100,10 +100,41 @@ def test_grouphelp_silenced():
     assert parsed["reason"] == "flood"
 
 
+def test_thm_unmute():
+    text = (
+        "Пользователь fraudleaker (https://t.me/fraudleak) (id 8363960791) "
+        "был размучен администратором Krass Fyrrsel (id 1005328899)"
+    )
+    parsed = parse_moderation_message(Message(text))
+    assert parsed["action_type"] == "unmute"
+    assert parsed["user_id"] == 8363960791
+    assert parsed["username"] == "fraudleak"
+    assert parsed["victim_name"] == "fraudleaker"
+    assert parsed["duration"] == "—"
+
+
+def test_miss_rose_unmute():
+    parsed = parse_moderation_message(Message("Fine, реля <3 can speak again."))
+    assert parsed["action_type"] == "unmute"
+    assert parsed["victim_name"] == "реля <3"
+
+
+def test_grouphelp_unmute():
+    parsed = parse_moderation_message(Message("@bxjks67 [7973635085] smutato."))
+    assert parsed["action_type"] == "unmute"
+    assert parsed["user_id"] == 7973635085
+    assert parsed["username"] == "bxjks67"
+
+
+def test_english_unmute():
+    parsed = parse_moderation_message(Message("User was unmuted."))
+    assert parsed["action_type"] == "unmute"
+    assert parsed["victim_name"] == "User"
+
+
 def test_negations_are_ignored():
     texts = [
         "@user [7973635085] sbannato.",
-        "@user [7973635085] smutato.",
         "@user [7973635085] non bannato.",
         "@user [7973635085] non è stato bannato.",
         "User was not banned.",
