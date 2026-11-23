@@ -412,16 +412,16 @@ async def handle_commands(event):
     elif command == '/help' and event.is_private:
         response = (
             f"<b>ℹ️ Доступные команды:</b>\n\n"
-            f"📊 /stats — Посмотреть свою статистику нарушений\n"
-            f"🏆 /top — В чате: топ этого чата. В ЛС: топ по группам, где вас наказывали\n"
-            f"🔎 /top &lt;название|ID&gt; — Статистика конкретного чата\n"
-            f"🌍 /globaltop — Общий топ-15 нарушителей по всем чатам\n"
-            f"⭐ /progress — Ваши достижения\n"
-            f"🎨 /setbg — Свой GIF-фон для /stats (после {STATS_BG_MIN_ACTIONS} мутов+банов, только в ЛС)\n"
-            f"🗑 /setbg off — Убрать свой фон\n"
-            f"❓ /help — Список всех доступных команд\n"
-            f"🗂 /chats — Список чатов, в которых состоит бот\n"
-            f"🔕 /stopspamming — Больше не получать уведомления в ЛС\n"
+            f"📊 <code>/stats</code> — Посмотреть свою статистику нарушений\n"
+            f"🏆 <code>/top</code> — В чате: топ этого чата. В ЛС: топ по группам, где вас наказывали\n"
+            f"🔎 <code>/top &lt;название|ID&gt;</code> — Статистика конкретного чата\n"
+            f"🌍 <code>/globaltop</code> — Общий топ-15 нарушителей по всем чатам\n"
+            f"⭐ <code>/progress</code> — Ваши достижения\n"
+            f"🎨 <code>/setbg</code> — Свой GIF-фон для /stats (после {STATS_BG_MIN_ACTIONS} мутов+банов, только в ЛС)\n"
+            f"🗑 <code>/setbg off</code> — Убрать свой фон\n"
+            f"❓ <code>/help</code> — Список всех доступных команд\n"
+            f"🗂 <code>/chats</code> — Список чатов, в которых состоит бот\n"
+            f"🔕 <code>/stopspamming</code> — Больше не получать уведомления в ЛС\n"
         )
         await event.reply(response, parse_mode='html')
 
